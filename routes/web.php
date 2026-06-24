@@ -1,0 +1,179 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\GuruController;
+use App\Http\Controllers\SiswaController;
+use App\Http\Controllers\WaliKelasController;
+
+use Illuminate\Support\Facades\Auth;
+
+// Root → redirect ke dashboard jika sudah login, atau ke Welcome jika belum
+Route::get('/', function () {
+    if (Auth::check()) {
+        $role = Auth::user()->role;
+        if ($role === 'ADMIN') return redirect()->route('admin.dashboard');
+        if ($role === 'TEACHER') {
+            if (session('login_intent') === 'walikelas') {
+                return redirect()->route('walikelas.dashboard');
+            }
+            return redirect()->route('guru.dashboard');
+        }
+        if ($role === 'STUDENT') return redirect()->route('siswa.dashboard');
+    }
+    return Inertia::render('Welcome');
+})->name('home');
+
+// Development Tools
+if (app()->environment(['local', 'development'])) {
+    Route::post('/dev/mock-time', function (\Illuminate\Http\Request $request) {
+        $request->validate(['mock_time' => 'required|date']);
+        $targetTime = strtotime($request->mock_time);
+        $offset = $targetTime - time();
+        \Illuminate\Support\Facades\Cache::put('time_offset', $offset);
+        return back()->with('message', 'Waktu aplikasi berhasil diubah!');
+    });
+    Route::post('/dev/reset-time', function () {
+        \Illuminate\Support\Facades\Cache::forget('time_offset');
+        return back()->with('message', 'Waktu aplikasi dikembalikan ke normal!');
+    });
+}
+
+// Auth Routes
+Route::middleware('guest')->group(function () {
+    // Rute login utama (redirect ke Welcome agar konsisten)
+    Route::get('/login', function () {
+        return Inertia::render('Welcome');
+    })->name('login');
+
+    // Halaman Form Login Spesifik
+    Route::get('/login/admin', function () {
+        return Inertia::render('Auth/LoginAdmin');
+    })->name('login.admin');
+    
+    Route::get('/login/guru', function () {
+        return Inertia::render('Auth/LoginTeacher', ['intent' => 'guru']);
+    })->name('login.guru');
+    
+    Route::get('/login/walikelas', function () {
+        return Inertia::render('Auth/LoginTeacher', ['intent' => 'walikelas']);
+    })->name('login.walikelas');
+    
+    Route::get('/login/siswa', function () {
+        return Inertia::render('Auth/LoginStudent');
+    })->name('login.siswa');
+
+    // Proses Login
+    Route::post('/login/admin', [AuthController::class, 'loginAdmin']);
+    Route::post('/login/guru', [AuthController::class, 'loginTeacher']);
+    Route::post('/login/siswa', [AuthController::class, 'loginStudent']);
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+use App\Http\Controllers\AdminController;
+
+// Admin routes (akan dilindungi middleware auth nanti)
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::redirect('/', '/admin/dashboard');
+    Route::redirect('', '/admin/dashboard');
+
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/jadwal-jp', [AdminController::class, 'jadwalJp'])->name('jadwal-jp');
+    Route::post('/jadwal-jp', [AdminController::class, 'updateJadwalJp']);
+    
+    // Manajemen Wali Kelas
+    Route::get('/wali-kelas', [AdminController::class, 'waliKelas'])->name('wali-kelas');
+    Route::post('/wali-kelas', [AdminController::class, 'updateWaliKelas']);
+    Route::post('/wali-kelas/reset', [AdminController::class, 'resetAllWaliKelas']);
+    
+    // Manajemen Siswa
+    Route::get('/siswa', [AdminController::class, 'siswaIndex'])->name('siswa');
+    Route::post('/siswa/import', [AdminController::class, 'importSiswa'])->name('siswa.import');
+    
+    // Timeline / Kalender Akademik
+    Route::get('/timeline', [AdminController::class, 'timeline'])->name('timeline');
+    Route::post('/timeline', [AdminController::class, 'storeTimeline']);
+    Route::delete('/timeline/{id}', [AdminController::class, 'deleteTimeline']);
+
+    // Manajemen Event & Libur
+    Route::get('/events', [AdminController::class, 'eventIndex'])->name('events.index');
+    Route::post('/events', [AdminController::class, 'storeEvent'])->name('events.store');
+    Route::delete('/events/{id}', [AdminController::class, 'deleteEvent'])->name('events.delete');
+
+    // Manajemen Kuesioner
+    Route::get('/kuesioner', [\App\Http\Controllers\AdminKuesionerController::class, 'index'])->name('kuesioner.index');
+    Route::post('/kuesioner', [\App\Http\Controllers\AdminKuesionerController::class, 'store'])->name('kuesioner.store');
+    Route::post('/kuesioner/{id}/toggle', [\App\Http\Controllers\AdminKuesionerController::class, 'toggleActive'])->name('kuesioner.toggle');
+    Route::delete('/kuesioner/{id}', [\App\Http\Controllers\AdminKuesionerController::class, 'destroy'])->name('kuesioner.destroy');
+    Route::get('/kuesioner/{id}/report', [\App\Http\Controllers\AdminKuesionerController::class, 'report'])->name('kuesioner.report');
+
+    // Konfigurasi & Lainnya
+    Route::get('/grade-config', [\App\Http\Controllers\AdminConfigController::class, 'gradeConfigIndex'])->name('grade-config.index');
+    Route::post('/grade-config', [\App\Http\Controllers\AdminConfigController::class, 'gradeConfigUpdate'])->name('grade-config.update');
+    Route::get('/rapor', [\App\Http\Controllers\AdminConfigController::class, 'rapor'])->name('rapor');
+    Route::get('/monitoring-nilai', [\App\Http\Controllers\AdminController::class, 'monitoringNilai'])->name('monitoring-nilai');
+    Route::get('/laporan-performa', [\App\Http\Controllers\AdminController::class, 'laporanPerforma'])->name('laporan-performa');
+});
+
+// Guru routes
+Route::middleware(['auth', 'role:TEACHER'])->prefix('guru')->name('guru.')->group(function () {
+    Route::redirect('/', '/guru/dashboard');
+    Route::redirect('', '/guru/dashboard');
+
+    Route::get('/dashboard', [\App\Http\Controllers\GuruController::class, 'dashboard'])->name('dashboard');
+    Route::get('/sesi-kbm/{id}', [\App\Http\Controllers\GuruController::class, 'sesiKbm'])->name('sesi-kbm');
+    Route::post('/kbm/{id_sesi}/mulai', [\App\Http\Controllers\GuruController::class, 'mulaiKbm'])->name('kbm.mulai');
+    Route::post('/kbm/{id_sesi}/selesai', [\App\Http\Controllers\GuruController::class, 'selesaiKbm'])->name('kbm.selesai');
+    
+    // Fitur KBM Tambahan
+    Route::get('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'pemetaanMateri'])->name('pemetaan-materi');
+    Route::post('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'simpanPemetaanMateri']);
+    Route::get('/nilai-sumatif', [\App\Http\Controllers\GuruController::class, 'nilaiSumatif'])->name('nilai-sumatif');
+    Route::post('/nilai-sumatif', [\App\Http\Controllers\GuruController::class, 'simpanNilaiSumatif']);
+    Route::get('/nilai-akhir', [\App\Http\Controllers\GuruController::class, 'nilaiAkhir'])->name('nilai-akhir');
+    Route::get('/rapor-preview', [\App\Http\Controllers\GuruController::class, 'raporPreview'])->name('rapor-preview');
+    Route::get('/kbm-status/{id}', [\App\Http\Controllers\GuruController::class, 'kbmStatus'])->name('kbm-status');
+
+    // Bank Soal & Ujian Live
+    Route::get('/bank-soal', [\App\Http\Controllers\BankSoalController::class, 'index'])->name('bank-soal.index');
+    Route::get('/bank-soal/create', [\App\Http\Controllers\BankSoalController::class, 'create'])->name('bank-soal.create');
+    Route::post('/bank-soal', [\App\Http\Controllers\BankSoalController::class, 'store'])->name('bank-soal.store');
+    Route::post('/bank-soal/{id}/pertanyaan', [\App\Http\Controllers\BankSoalController::class, 'storePertanyaan'])->name('bank-soal.pertanyaan.store');
+    Route::get('/bank-soal/{id}', [\App\Http\Controllers\BankSoalController::class, 'show'])->name('bank-soal.show');
+    
+    // Live Exam
+    Route::post('/live-exam/launch', [\App\Http\Controllers\LiveExamController::class, 'launch'])->name('live-exam.launch');
+    Route::get('/live-exam/{id}/monitor', [\App\Http\Controllers\LiveExamController::class, 'monitor'])->name('live-exam.monitor');
+    Route::post('/live-exam/{id}/close', [\App\Http\Controllers\LiveExamController::class, 'close'])->name('live-exam.close');
+    Route::post('/kbm/{id_sesi}/ujian', [\App\Http\Controllers\BankSoalController::class, 'launchUjian'])->name('kbm.ujian.launch');
+    Route::post('/kbm/ujian/{id}/tutup', [\App\Http\Controllers\BankSoalController::class, 'closeUjian'])->name('kbm.ujian.close');
+});
+
+// Siswa routes
+Route::middleware(['auth', 'role:STUDENT'])->prefix('siswa')->name('siswa.')->group(function () {
+    Route::redirect('/', '/siswa/dashboard');
+    Route::redirect('', '/siswa/dashboard');
+
+    Route::get('/dashboard', [\App\Http\Controllers\SiswaController::class, 'dashboard'])->name('dashboard');
+    Route::get('/scan-qr', [\App\Http\Controllers\SiswaController::class, 'scanQr'])->name('scan-qr');
+    Route::post('/scan-qr', [\App\Http\Controllers\SiswaController::class, 'processScan'])->name('process-scan');
+    Route::get('/nilai', [\App\Http\Controllers\SiswaController::class, 'nilai'])->name('nilai');
+    
+    // Ujian Live
+    Route::get('/ujian-live', [\App\Http\Controllers\SiswaController::class, 'ujianLive'])->name('ujian-live');
+    Route::get('/ujian-live/fetch', [\App\Http\Controllers\SiswaController::class, 'getLiveExam']);
+    Route::post('/ujian-live/submit', [\App\Http\Controllers\SiswaController::class, 'submitAnswer']);
+
+    // Kuesioner Evaluasi
+    Route::get('/kuesioner', [\App\Http\Controllers\SiswaController::class, 'kuesioner'])->name('kuesioner');
+    Route::post('/kuesioner', [\App\Http\Controllers\SiswaController::class, 'submitKuesioner'])->name('kuesioner.submit');
+});
+
+// Wali Kelas routes
+Route::middleware(['auth', 'role:TEACHER'])->prefix('walikelas')->name('walikelas.')->group(function () {
+    Route::get('/dashboard', [WaliKelasController::class, 'dashboard'])->name('dashboard');
+    Route::get('/p5-assessment', [WaliKelasController::class, 'p5Assessment'])->name('p5-assessment');
+});
