@@ -4,6 +4,7 @@
   <AppLayout
     title="Buat Bank Soal"
     subtitle="Ketik soal pilihan ganda dan tentukan kunci jawabannya"
+    :navigation="navigation"
   >
     <form @submit.prevent="submit" class="max-w-4xl mx-auto space-y-6">
       
@@ -85,6 +86,27 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 const props = defineProps({
   mapelList: Array
 });
+
+const navigation = [
+  {
+    label: 'KBM (Kegiatan Belajar Mengajar)',
+    items: [
+      { href: '/guru/dashboard', icon: '📊', label: 'Dashboard' },
+      { href: '/guru/jadwal', icon: '📅', label: 'Jadwal Mengajar' },
+      { href: '/guru/riwayat-jurnal', icon: '📜', label: 'Riwayat Jurnal Mengajar' },
+    ],
+  },
+  {
+    label: 'Evaluasi & Penilaian',
+    items: [
+      { href: '/guru/pemetaan-materi', icon: '🗺️', label: 'Pemetaan Materi' },
+      { href: '/guru/bank-soal', icon: '📝', label: 'Bank Soal & Ujian Live' },
+      { href: '/guru/nilai-sumatif', icon: '📊', label: 'Nilai Sumatif' },
+      { href: '/guru/nilai-akhir', icon: '📋', label: 'Nilai Akhir' },
+      { href: '/guru/rapor-preview', icon: '📑', label: 'Rapor Preview' },
+    ],
+  },
+];
 
 const getEmptyQuestion = () => ({
   pertanyaan: '',

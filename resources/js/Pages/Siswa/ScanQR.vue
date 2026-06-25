@@ -60,18 +60,18 @@ import axios from 'axios';
 
 const navigation = [
   {
-    label: 'Utama',
+    label: 'Akademik',
     items: [
-      { href: '/siswa/dashboard', icon: '📊', label: 'Dashboard' },
-      { href: '/siswa/scan-qr', icon: '📷', label: 'Scan Kehadiran' },
+      { href: '/siswa/dashboard', icon: '🏠', label: 'Beranda' },
+      { href: '/siswa/scan-qr', icon: '📷', label: 'Scan QR Presensi', badge: 'Live' },
+      { href: '/siswa/jadwal', icon: '📅', label: 'Jadwal Kelas' },
     ],
   },
   {
-    label: 'Akademik',
+    label: 'Laporan',
     items: [
-      { href: '/siswa/ujian', icon: '📝', label: 'Ujian Live & Tugas' },
-      { href: '/siswa/nilai', icon: '📈', label: 'Nilai & Rapor' },
-      { href: '/siswa/kuesioner', icon: '⭐', label: 'Kuesioner Guru' },
+      { href: '/siswa/nilai', icon: '📊', label: 'Nilai & Capaian' },
+      { href: '/siswa/kuesioner', icon: '📝', label: 'Evaluasi Pembelajaran' },
     ],
   },
 ];

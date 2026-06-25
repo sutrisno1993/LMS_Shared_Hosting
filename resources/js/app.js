@@ -2,7 +2,7 @@ import './bootstrap';
 import '../css/app.css';
 
 import { createApp, h } from 'vue';
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 
 const appName = import.meta.env.VITE_APP_NAME || 'LMS SMK 11 Maret';
@@ -23,4 +23,12 @@ createInertiaApp({
         color: '#4F46E5',
         showSpinner: true,
     },
+});
+
+router.on('success', () => {
+    if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        setTimeout(() => {
+            window.MathJax.typesetPromise().catch((err) => console.log(err));
+        }, 100);
+    }
 });

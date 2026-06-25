@@ -10,10 +10,10 @@ class AdminConfigController extends Controller
 {
     public function gradeConfigIndex()
     {
-        // Ambil konfigurasi global (ID=1). Jika belum ada, buat baru dengan default 50:50.
+        // Ambil konfigurasi global (ID=1). Jika belum ada, buat baru dengan default 40:40:20.
         $config = GradeConfig::firstOrCreate(
             ['id' => 1],
-            ['bobot_formatif' => 50, 'bobot_sumatif' => 50]
+            ['bobot_formatif' => 40, 'bobot_sumatif' => 40, 'bobot_absensi' => 20]
         );
 
         return Inertia::render('Admin/GradeConfig', [
@@ -26,9 +26,10 @@ class AdminConfigController extends Controller
         $request->validate([
             'bobot_formatif' => 'required|integer|min:0|max:100',
             'bobot_sumatif' => 'required|integer|min:0|max:100',
+            'bobot_absensi' => 'required|integer|min:0|max:100',
         ]);
 
-        if (($request->bobot_formatif + $request->bobot_sumatif) !== 100) {
+        if (($request->bobot_formatif + $request->bobot_sumatif + $request->bobot_absensi) !== 100) {
             return redirect()->back()->with('error', 'Total bobot harus tepat 100%');
         }
 
@@ -37,6 +38,7 @@ class AdminConfigController extends Controller
             [
                 'bobot_formatif' => $request->bobot_formatif,
                 'bobot_sumatif' => $request->bobot_sumatif,
+                'bobot_absensi' => $request->bobot_absensi,
             ]
         );
 

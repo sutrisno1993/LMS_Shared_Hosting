@@ -47,7 +47,7 @@
       </div>
       
       <!-- Logout Dropdown -->
-      <div class="absolute bottom-full left-0 mb-2 w-full px-3 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all">
+      <div class="absolute bottom-full left-0 pb-2 w-full px-3 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all">
         <Link href="/logout" method="post" as="button" class="w-full text-left px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl border border-red-500/20 transition-colors">
           🚪 Keluar (Logout)
         </Link>

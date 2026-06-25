@@ -19,19 +19,19 @@
             🎒
           </div>
           <h1 class="text-xl font-bold text-white">Login Siswa</h1>
-          <p class="text-xs text-slate-400 mt-1">Masuk dengan NISN Anda</p>
+          <p class="text-xs text-slate-400 mt-1">Masuk dengan NISN atau NIS Anda</p>
         </div>
 
         <form @submit.prevent="submit" class="space-y-4">
           <div>
-            <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">NISN</label>
+            <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">NISN / NIS</label>
             <div class="relative">
               <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">🆔</span>
               <input
                 v-model="form.nisn"
                 type="text"
                 required
-                placeholder="Nomor Induk Siswa Nasional"
+                placeholder="Nomor Induk Siswa Nasional / NIS"
                 class="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-10 pr-4 text-sm text-white placeholder-slate-600 outline-none focus:border-indigo-500 focus:bg-indigo-500/10 focus:ring-2 focus:ring-indigo-500/20 transition-all"
               />
             </div>

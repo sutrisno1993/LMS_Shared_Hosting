@@ -78,9 +78,12 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        $student = \App\Models\Student::where('nisn', $request->nisn)->first();
+        $student = \App\Models\Student::where('nisn', $request->nisn)
+            ->orWhere('nis', $request->nisn)
+            ->first();
+            
         if (!$student) {
-            return back()->withErrors(['nisn' => 'NISN tidak ditemukan.'])->onlyInput('nisn');
+            return back()->withErrors(['nisn' => 'NISN atau NIS tidak ditemukan.'])->onlyInput('nisn');
         }
 
         $user = \App\Models\User::where('id_siswa', $student->id_siswa)->first();

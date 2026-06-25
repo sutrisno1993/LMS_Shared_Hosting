@@ -49,9 +49,11 @@
                'relative rounded-2xl border p-5 transition-all duration-200',
                sesi.isActive
                  ? 'border-indigo-500/50 bg-indigo-500/10 shadow-lg shadow-indigo-500/10'
-                 : sesi.status === 'SELESAI'
-                   ? 'border-white/5 bg-white/2 opacity-60'
-                   : 'border-white/8 hover:border-white/15'
+                 : sesi.id === closestUpcomingSessionId
+                   ? 'border-amber-500/50 bg-amber-500/5 shadow-lg shadow-amber-500/5'
+                   : sesi.status === 'SELESAI'
+                     ? 'border-white/5 bg-white/2 opacity-60'
+                     : 'border-white/8 hover:border-white/15'
              ]"
              style="background: var(--card)">
 
@@ -60,6 +62,11 @@
                class="absolute top-4 right-4 flex items-center gap-2 text-xs font-semibold text-indigo-400">
             <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
             SLOT AKTIF SEKARANG
+          </div>
+          <div v-else-if="sesi.id === closestUpcomingSessionId"
+               class="absolute top-4 right-4 flex items-center gap-2 text-xs font-semibold text-amber-400">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            SESI BERIKUTNYA
           </div>
 
           <div class="flex items-start gap-4">
@@ -79,7 +86,13 @@
                 <h3 class="font-bold text-sm">{{ sesi.mapel }}</h3>
                 <span :class="statusBadge(sesi.statusGuru)">{{ sesi.statusGuru }}</span>
               </div>
-              <div class="flex items-center gap-3 text-xs text-slate-500">
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold"
+                      :class="(sesi.shift || 'PAGI').toUpperCase() === 'PAGI' 
+                        ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' 
+                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'">
+                  Shift {{ (sesi.shift || 'PAGI').toUpperCase() }}
+                </span>
                 <span>🏫 {{ sesi.kelas }}</span>
                 <span>📍 Ruang {{ sesi.ruang }}</span>
                 <span>⏱ {{ sesi.durasiJP }} JP ({{ sesi.durasiMenit }} menit)</span>
@@ -103,7 +116,7 @@
 
               <!-- MULAI SESI — hanya jika slot aktif dan belum dimulai -->
               <button
-                v-if="sesi.isActive && sesi.status === 'BELUM_MULAI'"
+                v-if="sesi.isActive && sesi.status === 'PENDING'"
                 @click="mulaiSesi(sesi)"
                 class="relative overflow-hidden flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
                 style="background: linear-gradient(135deg, #4F46E5, #7C3AED); box-shadow: 0 0 20px rgba(79,70,229,0.5), 0 0 40px rgba(79,70,229,0.2);">
@@ -129,7 +142,12 @@
               <!-- PENDING / BELUM AKTIF -->
               <div v-else
                    class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 bg-white/4 border border-white/8">
-                ⏳ Menunggu Jam
+                <span v-if="sesi.id === closestUpcomingSessionId" class="text-amber-400 font-bold">
+                  ⏳ {{ getCountdownText(sesi) }}
+                </span>
+                <span v-else>
+                  ⏳ Menunggu Jam
+                </span>
               </div>
 
             </div>
@@ -232,6 +250,57 @@ const currentTime = computed(() =>
   now.value.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 );
 
+const closestUpcomingSessionId = computed(() => {
+  if (!props.jadwal || props.jadwal.length === 0) return null;
+  
+  let minDiff = Infinity;
+  let closestId = null;
+  
+  const currentMs = now.value.getTime();
+  const todayPrefix = now.value.toDateString();
+  
+  props.jadwal.forEach((sesi) => {
+    // Check pending session using raw props data
+    if (sesi.status_sesi === 'PENDING' && !sesi.is_active) {
+      if (sesi.jamMulai && sesi.jamMulai !== '-') {
+        const timeStr = `${todayPrefix} ${sesi.jamMulai}`;
+        const targetMs = new Date(timeStr).getTime();
+        const diff = targetMs - currentMs;
+        if (diff > 0 && diff < minDiff) {
+          minDiff = diff;
+          closestId = sesi.id;
+        }
+      }
+    }
+  });
+  
+  return closestId;
+});
+
+const getCountdownText = (sesi) => {
+  if (!sesi || sesi.id !== closestUpcomingSessionId.value) return '';
+  if (!sesi.jamMulai || sesi.jamMulai === '-') return '';
+  
+  const todayPrefix = now.value.toDateString();
+  const targetMs = new Date(`${todayPrefix} ${sesi.jamMulai}`).getTime();
+  const diffMs = targetMs - now.value.getTime();
+  
+  if (diffMs <= 0) return 'Segera dimulai';
+  
+  const totalSecs = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSecs / 3600);
+  const minutes = Math.floor((totalSecs % 3600) / 60);
+  const seconds = totalSecs % 60;
+  
+  if (hours > 0) {
+    return `Mulai dalam ${hours}j ${minutes}m ${seconds}s`;
+  }
+  if (minutes > 0) {
+    return `Mulai dalam ${minutes}m ${seconds}s`;
+  }
+  return `Mulai dalam ${seconds}s`;
+};
+
 const greeting = computed(() => {
   const h = now.value.getHours();
   if (h < 11) return 'Pagi';
@@ -249,6 +318,7 @@ const navigation = [
     label: 'KBM (Kegiatan Belajar Mengajar)',
     items: [
       { href: '/guru/dashboard', icon: '📊', label: 'Dashboard' },
+      { href: '/guru/jadwal', icon: '📅', label: 'Jadwal Mengajar' },
       { href: '/guru/riwayat-jurnal', icon: '📜', label: 'Riwayat Jurnal Mengajar' },
     ],
   },
@@ -267,22 +337,44 @@ const navigation = [
 // Data jadwal dari database
 const jadwalList = computed(() => {
   if (!props.jadwal) return [];
-  return props.jadwal.map((j) => {
+  const mapped = props.jadwal.map((j) => {
     return {
       ...j,
-      jamMulai: j.jam,
-      jamSelesai: '',
+      isActive: j.is_active,
+      status: j.status_sesi,
+      statusSesi: j.status_sesi,
+      jamMulai: j.jamMulai,
+      jamSelesai: j.jamSelesai,
       durasiJP: 1,
       durasiMenit: 45,
       siswaHadir: 0, // Belum ditarik dari DB
       siswaTotal: 36,
     };
   });
+
+  return mapped.sort((a, b) => {
+    const aHighlighted = a.isActive || (closestUpcomingSessionId.value && a.id === closestUpcomingSessionId.value);
+    const bHighlighted = b.isActive || (closestUpcomingSessionId.value && b.id === closestUpcomingSessionId.value);
+
+    if (aHighlighted && !bHighlighted) return -1;
+    if (!aHighlighted && bHighlighted) return 1;
+
+    // Compare shift (PAGI first, then SIANG)
+    const aShift = (a.shift || 'PAGI').toUpperCase();
+    const bShift = (b.shift || 'PAGI').toUpperCase();
+
+    if (aShift !== bShift) {
+      return aShift === 'PAGI' ? -1 : 1;
+    }
+
+    // Compare jam_ke
+    return a.jam_ke - b.jam_ke;
+  });
 });
 
 // Logika QR Code Generator & Polling
 const activePendingSession = computed(() => {
-  return props.jadwal?.find(j => j.status_sesi === 'PENDING' && j.is_active);
+  return props.jadwal?.find(j => j.status_sesi === 'SCANNING' && j.is_active);
 });
 
 const qrPayload = ref('');

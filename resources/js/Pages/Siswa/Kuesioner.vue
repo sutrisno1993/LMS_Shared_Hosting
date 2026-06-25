@@ -4,6 +4,7 @@
   <AppLayout
     title="Evaluasi Pendidik"
     subtitle="Berikan penilaian jujur Anda untuk membantu meningkatkan kualitas sekolah"
+    :navigation="navigation"
   >
     <div class="max-w-3xl mx-auto space-y-6">
       
@@ -118,6 +119,24 @@ const props = defineProps({
   questionnaire: Object,
   targets: Array
 });
+
+const navigation = [
+  {
+    label: 'Akademik',
+    items: [
+      { href: '/siswa/dashboard', icon: '🏠', label: 'Beranda' },
+      { href: '/siswa/scan-qr', icon: '📷', label: 'Scan QR Presensi', badge: 'Live' },
+      { href: '/siswa/jadwal', icon: '📅', label: 'Jadwal Kelas' },
+    ],
+  },
+  {
+    label: 'Laporan',
+    items: [
+      { href: '/siswa/nilai', icon: '📊', label: 'Nilai & Capaian' },
+      { href: '/siswa/kuesioner', icon: '📝', label: 'Evaluasi Pembelajaran' },
+    ],
+  },
+];
 
 const selectedTarget = ref(null);
 const hoverRating = ref({});

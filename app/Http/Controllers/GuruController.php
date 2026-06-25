@@ -18,7 +18,12 @@ class GuruController extends Controller
         $user = Auth::user();
         $today = now()->toDateString();
         
-        // Ambil sesi KBM hari ini untuk guru yang login (terjadwal atau aktual)
+        // Get day of week name
+        $dayOfWeek = now()->dayOfWeek;
+        $days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
+        $hariEnum = $days[$dayOfWeek];
+
+        // Ambil sesi KBM harian untuk guru yang login (terjadwal atau aktual)
         $kbmSessionsRaw = \App\Models\KbmSession::with(['clas', 'subject'])
             ->where('tanggal', $today)
             ->where(function ($query) use ($user) {
@@ -29,18 +34,39 @@ class GuruController extends Controller
             ->get();
 
         // Format data sesuai dengan yang dibutuhkan frontend
-        $formattedJadwal = $kbmSessionsRaw->map(function ($session) {
+        $formattedJadwal = $kbmSessionsRaw->map(function ($session) use ($hariEnum) {
+            $shift = $session->clas->shift_operasional ?? 'PAGI';
+            
+            // Cari JpSchedule untuk menentukan apakah jam pelajaran ini aktif sekarang
+            $jp = \App\Models\JpSchedule::where('hari', $hariEnum)
+                ->where('shift', $shift)
+                ->where('jam_ke', $session->jam_ke)
+                ->first();
+
+            $nowTime = now()->toTimeString();
+            $isTimeActive = false;
+            if ($jp) {
+                $isTimeActive = ($nowTime >= $jp->waktu_mulai && $nowTime <= $jp->waktu_selesai);
+            }
+
+            // Tambahkan waktu mulai & selesai ke response agar UI bisa menampilkannya
+            $jamMulai = $jp ? substr($jp->waktu_mulai, 0, 5) : '-';
+            $jamSelesai = $jp ? substr($jp->waktu_selesai, 0, 5) : '-';
+
             return [
                 'id' => $session->id,
                 'kelas' => $session->clas->nama_kelas ?? 'Unknown',
                 'mapel' => $session->subject->nama_mapel ?? 'Unknown',
                 'jam' => 'Jam ke-' . $session->jam_ke,
+                'jam_ke' => $session->jam_ke,
+                'jamMulai' => $jamMulai,
+                'jamSelesai' => $jamSelesai,
                 'status_sesi' => $session->status_sesi,
                 'status_guru' => $session->status_guru,
-                'is_active' => $session->status_sesi === 'PENDING' || $session->status_sesi === 'AKTIF',
-                'payload' => $session->status_sesi === 'PENDING' ? json_encode([
+                'is_active' => $isTimeActive, // is_active HANYA jika waktu sekarang di dalam jam KBM tersebut!
+                'shift' => $shift,
+                'payload' => $session->status_sesi === 'SCANNING' ? json_encode([
                     'id_kbm_session' => $session->id,
-                    // Timestamp ditambahkan oleh frontend tiap 10 detik
                 ]) : null,
             ];
         });
@@ -149,13 +175,13 @@ class GuruController extends Controller
         $user = Auth::user();
 
         // 1. Ambil daftar kelas yang diajar guru
-        $kelasMapelList = TeacherSubject::with(['class', 'subject'])
-            ->where('id_guru', $user->id_guru)
+        $kelasMapelList = \App\Models\ClassSubject::with(['clas', 'subject'])
+            ->where('id_guru_mutlak', $user->id_guru)
             ->get();
 
         // Unique classes and subjects for dropdowns
-        $kelasList = $kelasMapelList->pluck('class')->unique('id_kelas')->values();
-        $mapelList = $kelasMapelList->pluck('subject')->unique('id_mapel')->values();
+        $kelasList = $kelasMapelList->pluck('clas')->filter()->unique('id_kelas')->values();
+        $mapelList = $kelasMapelList->pluck('subject')->filter()->unique('id_mapel')->values();
 
         // Default selection
         $selectedKelas = $request->input('id_kelas', $kelasList->first()->id_kelas ?? null);
@@ -261,26 +287,34 @@ class GuruController extends Controller
     {
         $session = \App\Models\KbmSession::findOrFail($id_sesi);
         
-        if ($session->status_sesi === 'PENDING') {
-            $session->status_sesi = 'AKTIF';
-            $session->status_guru = 'HADIR';
-            $session->waktu_scan_masuk = now();
-            $session->save();
+        $blockSessions = \App\Models\KbmSession::where('tanggal', $session->tanggal)
+            ->where('id_kelas', $session->id_kelas)
+            ->where('id_mapel', $session->id_mapel)
+            ->where('id_guru_terjadwal', $session->id_guru_terjadwal)
+            ->get();
 
-            // Inisialisasi absensi semua siswa di kelas ini sebagai default HADIR
-            $studentsInClass = \App\Models\Student::where('id_kelas', $session->id_kelas)->get();
-            foreach ($studentsInClass as $s) {
-                \App\Models\StudentAttendance::updateOrCreate(
-                    [
-                        'id_kbm_session' => $session->id,
-                        'id_siswa' => $s->id_siswa,
-                    ],
-                    [
-                        'status' => 'HADIR',
-                        'metode' => 'SYSTEM',
-                        'waktu_presensi' => null,
-                    ]
-                );
+        foreach ($blockSessions as $bSession) {
+            if ($bSession->status_sesi === 'PENDING') {
+                $bSession->status_sesi = 'SCANNING';
+                $bSession->status_guru = 'HADIR';
+                $bSession->waktu_scan_masuk = now();
+                $bSession->save();
+
+                // Inisialisasi absensi semua siswa di kelas ini sebagai default HADIR
+                $studentsInClass = \App\Models\Student::where('id_kelas', $bSession->id_kelas)->get();
+                foreach ($studentsInClass as $s) {
+                    \App\Models\StudentAttendance::updateOrCreate(
+                        [
+                            'id_kbm_session' => $bSession->id,
+                            'id_siswa' => $s->id_siswa,
+                        ],
+                        [
+                            'status' => 'HADIR',
+                            'metode' => 'SYSTEM',
+                            'waktu_presensi' => null,
+                        ]
+                    );
+                }
             }
         }
 
@@ -290,9 +324,18 @@ class GuruController extends Controller
     public function selesaiKbm($id_sesi)
     {
         $session = \App\Models\KbmSession::findOrFail($id_sesi);
-        $session->status_sesi = 'SELESAI';
-        $session->waktu_scan_keluar = now();
-        $session->save();
+        
+        $blockSessions = \App\Models\KbmSession::where('tanggal', $session->tanggal)
+            ->where('id_kelas', $session->id_kelas)
+            ->where('id_mapel', $session->id_mapel)
+            ->where('id_guru_terjadwal', $session->id_guru_terjadwal)
+            ->get();
+
+        foreach ($blockSessions as $bSession) {
+            $bSession->status_sesi = 'SELESAI';
+            $bSession->waktu_scan_keluar = now();
+            $bSession->save();
+        }
 
         return redirect()->route('guru.dashboard')->with('message', 'Sesi KBM selesai.');
     }
@@ -306,25 +349,33 @@ class GuruController extends Controller
 
         $session = \App\Models\KbmSession::findOrFail($id_sesi);
         
-        // Simpan materi log ke session
-        if ($request->has('materi_log')) {
-            $session->materi_log = $request->materi_log;
-            $session->save();
-        }
+        $blockSessions = \App\Models\KbmSession::where('tanggal', $session->tanggal)
+            ->where('id_kelas', $session->id_kelas)
+            ->where('id_mapel', $session->id_mapel)
+            ->where('id_guru_terjadwal', $session->id_guru_terjadwal)
+            ->get();
 
-        // Simpan/update presensi siswa
-        foreach ($request->students as $studentData) {
-            \App\Models\StudentAttendance::updateOrCreate(
-                [
-                    'id_kbm_session' => $id_sesi,
-                    'id_siswa' => $studentData['id'],
-                ],
-                [
-                    'status' => $studentData['status'],
-                    'metode' => 'MANUAL_GURU',
-                    'waktu_presensi' => $studentData['status'] === 'HADIR' ? now() : null,
-                ]
-            );
+        foreach ($blockSessions as $bSession) {
+            // Simpan materi log ke session
+            if ($request->has('materi_log')) {
+                $bSession->materi_log = $request->materi_log;
+                $bSession->save();
+            }
+
+            // Simpan/update presensi siswa untuk masing-masing sesi di blok tersebut
+            foreach ($request->students as $studentData) {
+                \App\Models\StudentAttendance::updateOrCreate(
+                    [
+                        'id_kbm_session' => $bSession->id,
+                        'id_siswa' => $studentData['id'],
+                    ],
+                    [
+                        'status' => $studentData['status'],
+                        'metode' => 'MANUAL_GURU',
+                        'waktu_presensi' => $studentData['status'] === 'HADIR' ? now() : null,
+                    ]
+                );
+            }
         }
 
         return redirect()->back()->with('message', 'Presensi dan Jurnal berhasil disimpan.');
@@ -370,6 +421,26 @@ class GuruController extends Controller
 
         return Inertia::render('Guru/RiwayatJurnal', [
             'sessions' => $sessions,
+        ]);
+    }
+
+    public function jadwal()
+    {
+        $user = Auth::user();
+        
+        $timetable = Timetable::with(['classSubject.clas', 'classSubject.subject'])
+            ->where('id_guru', $user->id_guru)
+            ->get();
+
+        $jpSchedules = \App\Models\JpSchedule::orderBy('shift')
+            ->orderByRaw("FIELD(hari, 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU')")
+            ->orderBy('waktu_mulai')
+            ->get()
+            ->groupBy(['shift', 'hari']);
+
+        return Inertia::render('Guru/Jadwal', [
+            'timetable' => $timetable,
+            'jpSchedules' => $jpSchedules
         ]);
     }
 }

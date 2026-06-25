@@ -7,8 +7,8 @@
     :navigation="navigation"
   >
     <template #topbar-actions>
-      <span class="text-xs font-mono" :class="sessionStatus === 'AKTIF' ? 'text-green-400' : sessionStatus === 'SELESAI' ? 'text-blue-400' : 'text-yellow-400'">
-        {{ sessionStatus === 'AKTIF' ? '🟢 Sesi Aktif' : sessionStatus === 'SELESAI' ? '🔵 Sesi Selesai' : '🟡 Menunggu Scan Pertama' }}
+      <span class="text-xs font-mono" :class="sessionStatus === 'AKTIF' ? 'text-green-400' : sessionStatus === 'SELESAI' ? 'text-blue-400' : sessionStatus === 'SCANNING' ? 'text-indigo-400' : 'text-yellow-400'">
+        {{ sessionStatus === 'AKTIF' ? '🟢 Sesi Aktif' : sessionStatus === 'SELESAI' ? '🔵 Sesi Selesai' : sessionStatus === 'SCANNING' ? '⚡ Menunggu Scan QR' : '🟡 Menunggu Start' }}
       </span>
     </template>
 
@@ -22,6 +22,7 @@
           'rounded-2xl border p-5 transition-all duration-500',
           sessionStatus === 'AKTIF' ? 'border-green-500/30 bg-green-500/8' :
           sessionStatus === 'SELESAI' ? 'border-blue-500/30 bg-blue-500/8' :
+          sessionStatus === 'SCANNING' ? 'border-indigo-500/30 bg-indigo-500/8' :
           'border-yellow-500/30 bg-yellow-500/8'
         ]">
           <div class="flex items-center gap-3">
@@ -29,25 +30,27 @@
               'w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0',
               sessionStatus === 'AKTIF' ? 'bg-green-500/20' :
               sessionStatus === 'SELESAI' ? 'bg-blue-500/20' :
+              sessionStatus === 'SCANNING' ? 'bg-indigo-500/20' :
               'bg-yellow-500/20'
             ]">
-              {{ sessionStatus === 'AKTIF' ? '✅' : sessionStatus === 'SELESAI' ? '✓' : '⏳' }}
+              {{ sessionStatus === 'AKTIF' ? '✅' : sessionStatus === 'SELESAI' ? '✓' : sessionStatus === 'SCANNING' ? '⚡' : '⏳' }}
             </div>
             <div>
-              <div class="font-bold" :class="sessionStatus === 'AKTIF' ? 'text-green-400' : sessionStatus === 'SELESAI' ? 'text-blue-400' : 'text-yellow-400'">
-                {{ sessionStatus === 'AKTIF' ? 'KELAS AKTIF' : sessionStatus === 'SELESAI' ? 'SESI SELESAI' : 'PENDING — Menunggu Scan' }}
+              <div class="font-bold" :class="sessionStatus === 'AKTIF' ? 'text-green-400' : sessionStatus === 'SELESAI' ? 'text-blue-400' : sessionStatus === 'SCANNING' ? 'text-indigo-400' : 'text-yellow-400'">
+                {{ sessionStatus === 'AKTIF' ? 'KELAS AKTIF' : sessionStatus === 'SELESAI' ? 'SESI SELESAI' : sessionStatus === 'SCANNING' ? 'MENUNGGU PRESENSI SISWA' : 'PENDING' }}
               </div>
               <div class="text-xs text-slate-500 mt-0.5">
                 {{ sessionStatus === 'AKTIF' ? 'Pembelajaran sedang berlangsung. Absensi default hadir.' : 
                    sessionStatus === 'SELESAI' ? 'Pertemuan kelas ini sudah selesai dideklarasikan.' :
-                   'Minta salah satu perwakilan siswa untuk scan QR Code agar sesi aktif.' }}
+                   sessionStatus === 'SCANNING' ? 'Minta salah satu perwakilan siswa untuk scan QR Code agar sesi aktif.' :
+                   'Tekan tombol Mulai Sesi KBM di Dashboard untuk memulai kelas.' }}
               </div>
             </div>
           </div>
         </div>
 
-        <!-- QR Code Container (hanya jika PENDING) -->
-        <div v-if="sessionStatus === 'PENDING'" class="rounded-2xl border border-white/8 p-7 text-center" style="background: var(--card)">
+        <!-- QR Code Container (hanya jika SCANNING) -->
+        <div v-if="sessionStatus === 'SCANNING'" class="rounded-2xl border border-white/8 p-7 text-center" style="background: var(--card)">
           <div class="text-sm font-bold mb-1">QR Code Absensi</div>
           <div class="text-xs text-slate-500 mb-5">Gunakan QR ini untuk mengaktifkan sesi kelas</div>
 
@@ -162,7 +165,7 @@
               <div class="text-xs text-slate-500">{{ session?.kelas }} — {{ students.length }} siswa</div>
             </div>
             <!-- Manual absensi hanya aktif setelah sesi AKTIF -->
-            <div v-if="sessionStatus === 'PENDING'"
+            <div v-if="sessionStatus === 'PENDING' || sessionStatus === 'SCANNING'"
                  class="text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1.5 rounded-lg">
               🔒 Tunggu scan pertama
             </div>
@@ -326,7 +329,7 @@ const countdownPct = computed(() => (countdownSecs.value / 900) * 100);
 let statusPollingInterval = null;
 
 onMounted(() => {
-  if (sessionStatus.value === 'PENDING') {
+  if (sessionStatus.value === 'SCANNING') {
     qrPayload.value = generateQrPayload();
     countdownTimer = setInterval(() => {
       if (countdownSecs.value > 0) {
@@ -484,6 +487,7 @@ const navigation = [
     label: 'KBM (Kegiatan Belajar Mengajar)',
     items: [
       { href: '/guru/dashboard', icon: '📊', label: 'Dashboard' },
+      { href: '/guru/jadwal', icon: '📅', label: 'Jadwal Mengajar' },
       { href: '/guru/riwayat-jurnal', icon: '📜', label: 'Riwayat Jurnal Mengajar' },
     ],
   },

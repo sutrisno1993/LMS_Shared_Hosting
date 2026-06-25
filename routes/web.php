@@ -130,6 +130,7 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('guru')->name('guru.')->grou
     Route::post('/sesi-kbm/{id_sesi}/selesai', [\App\Http\Controllers\GuruController::class, 'selesaiKbm'])->name('kbm.selesai');
     Route::post('/sesi-kbm/{id_sesi}/presensi', [\App\Http\Controllers\GuruController::class, 'simpanPresensi'])->name('kbm.presensi.store');
     Route::get('/riwayat-jurnal', [\App\Http\Controllers\GuruController::class, 'riwayatJurnal'])->name('riwayat-jurnal');
+    Route::get('/jadwal', [\App\Http\Controllers\GuruController::class, 'jadwal'])->name('jadwal');
     
     // Fitur KBM Tambahan
     Route::get('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'pemetaanMateri'])->name('pemetaan-materi');
@@ -173,6 +174,9 @@ Route::middleware(['auth', 'role:STUDENT'])->prefix('siswa')->name('siswa.')->gr
     // Kuesioner Evaluasi
     Route::get('/kuesioner', [\App\Http\Controllers\SiswaController::class, 'kuesioner'])->name('kuesioner');
     Route::post('/kuesioner', [\App\Http\Controllers\SiswaController::class, 'submitKuesioner'])->name('kuesioner.submit');
+
+    // Jadwal Kelas
+    Route::get('/jadwal', [\App\Http\Controllers\SiswaController::class, 'jadwal'])->name('jadwal');
 });
 
 // Wali Kelas routes

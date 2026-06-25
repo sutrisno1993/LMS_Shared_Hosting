@@ -9,5 +9,5 @@ class GradeConfig extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['bobot_formatif', 'bobot_sumatif'];
+    protected $fillable = ['bobot_formatif', 'bobot_sumatif', 'bobot_absensi'];
 }

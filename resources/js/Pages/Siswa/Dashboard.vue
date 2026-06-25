@@ -98,29 +98,42 @@
           <div class="divide-y divide-white/5">
             <div v-for="sesi in jadwalList" :key="sesi.id" 
                  class="p-4 flex items-center gap-4 transition-colors hover:bg-white/2"
-                 :class="{ 'border-l-4 border-l-indigo-500 bg-indigo-500/5': sesi.status === 'AKTIF' }">
+                 :class="[
+                   sesi.isTimeActive || sesi.status === 'AKTIF' || sesi.status === 'SCANNING'
+                     ? 'border-l-4 border-l-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/5'
+                     : 'border-l-4 border-l-transparent bg-transparent',
+                   sesi.status === 'BREAK' ? 'opacity-85 bg-white/2' : ''
+                 ]">
               
-              <div class="w-16 text-center shrink-0">
-                <div class="text-lg font-black font-mono text-white" :class="{ 'text-indigo-400': sesi.status === 'AKTIF' }">
-                  {{ sesi.jamMulai }}
+              <!-- Waktu & JP -->
+              <div class="w-28 text-center shrink-0">
+                <div class="text-sm font-bold font-mono text-white" :class="{ 'text-indigo-400': sesi.isTimeActive || sesi.status === 'AKTIF' || sesi.status === 'SCANNING' }">
+                  {{ sesi.jamMulai }} - {{ sesi.jamSelesai }}
                 </div>
-                <div class="text-[10px] text-slate-500 mt-0.5">JP {{ sesi.jamKe }}</div>
+                <div v-if="sesi.status !== 'BREAK'" class="text-[10px] text-slate-500 mt-0.5">JP {{ sesi.jamKe }}</div>
+                <div v-else class="text-[10px] text-amber-400 mt-0.5">☕ BREAK</div>
               </div>
               
+              <!-- Info Sesi / Break -->
               <div class="flex-1 min-w-0">
-                <div class="font-bold text-sm truncate">{{ sesi.mapel }}</div>
+                <div class="font-bold text-sm truncate" :class="{ 'text-amber-400': sesi.status === 'BREAK', 'text-indigo-200': sesi.isTimeActive || sesi.status === 'AKTIF' || sesi.status === 'SCANNING' }">
+                  {{ sesi.mapel }}
+                </div>
                 <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
-                  <span>👨‍🏫 {{ sesi.guru }}</span>
+                  <span>{{ sesi.status === 'BREAK' ? '⏱️ Sesi Istirahat' : '👨‍🏫 ' + sesi.guru }}</span>
                   <span>•</span>
                   <span>📍 {{ sesi.ruang }}</span>
                 </div>
               </div>
               
+              <!-- Status Presensi / KBM -->
               <div class="shrink-0 text-right">
                 <div v-if="sesi.presensiSiswa === 'HADIR'" class="badge-hadir">Hadir</div>
-                <div v-else-if="sesi.status === 'AKTIF'" class="text-xs font-bold text-indigo-400 animate-pulse">Sedang KBM</div>
-                <div v-else-if="sesi.status === 'SELESAI' && !sesi.presensiSiswa" class="badge-alpa">Alpa</div>
-                <div v-else class="text-[10px] text-slate-500">{{ sesi.jamSelesai }}</div>
+                <div v-else-if="sesi.status === 'AKTIF' || sesi.status === 'SCANNING'" class="text-xs font-bold text-indigo-400 animate-pulse">Sedang KBM</div>
+                <div v-else-if="sesi.isTimeActive" class="text-xs font-bold text-indigo-400 animate-pulse">Jam Berlangsung</div>
+                <div v-else-if="sesi.isTimePassed" class="badge-pending">Selesai</div>
+                <div v-else-if="sesi.status === 'BREAK'" class="text-xs font-semibold text-amber-500/80">☕ Istirahat</div>
+                <div v-else class="text-[10px] text-slate-500">Menunggu Sesi</div>
               </div>
 
             </div>
@@ -161,6 +174,7 @@ const navigation = [
     items: [
       { href: '/siswa/dashboard', icon: '🏠', label: 'Beranda' },
       { href: '/siswa/scan-qr', icon: '📷', label: 'Scan QR Presensi', badge: 'Live' },
+      { href: '/siswa/jadwal', icon: '📅', label: 'Jadwal Kelas' },
     ],
   },
   {
