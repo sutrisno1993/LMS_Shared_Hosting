@@ -14,9 +14,13 @@ return new class extends Migration
         Schema::create('student_disciplines', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('id_siswa');
-            $table->string('tipe_tindakan'); // 'PEMBINAAN_PRIBADI', 'PEMBINAAN_PERSONAL', 'PEMANGGILAN_ORTU', 'SP_1', 'SP_2', 'SP_3', 'PERJANJIAN_TIDAK_NAIK'
+            $table->string('kategori_kasus')->default('ABSENSI'); // 'ABSENSI', 'AKADEMIK', 'PERILAKU'
+            $table->text('kasus_detail')->nullable();
+            $table->string('tipe_tindakan'); // 'PEMBINAAN_PRIBADI', 'PEMBINAAN_PERSONAL', 'PEMANGGILAN_ORTU', 'HOME_VISIT', 'SP_1', 'SP_2', 'SP_3', 'PERJANJIAN_TIDAK_NAIK'
             $table->date('tanggal_tindakan');
             $table->text('keterangan')->nullable();
+            $table->text('tindakan_lanjut')->nullable();
+            $table->string('foto_bukti')->nullable();
             $table->timestamps();
 
             $table->foreign('id_siswa')->references('id_siswa')->on('students')->onDelete('cascade');

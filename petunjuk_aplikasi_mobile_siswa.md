@@ -203,5 +203,8 @@ Siswa berperan sebagai auditor kualitas pengajaran.
 1. **Push Notifications**:
    * Pengingat instan ketika diterbitkan surat pembinaan (SP 1, SP 2, SP 3) ke akun siswa.
    * Notifikasi jika nilai sumatif baru di-input oleh guru mapel.
-2. **Optimasi Konsumsi Kuota**:
+## 6. Desain Antarmuka (UI/UX) Premium
+* **Font**: Gunakan font modern (Inter/Outfit).
+* **Custom Toast / Snackbar (Notifikasi Sukses)**: Untuk semua umpan balik atas aksi pengguna (seperti Selesai Scan QR, Kirim Jawaban Ujian Live, Submit Kuesioner), **wajib** menggunakan *Toast Notification* atau *Snackbar* berwarna hijau yang melayang di layar dan hilang secara otomatis. **Dilarang** memakai `alert` pop-up bawaan yang kaku.
+* **Optimasi Konsumsi Kuota**:
    * Kompresi payload data se-minimal mungkin agar siswa tidak boros kuota internet saat menggunakan aplikasi di sekolah.

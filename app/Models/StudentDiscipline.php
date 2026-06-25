@@ -13,9 +13,13 @@ class StudentDiscipline extends Model
 
     protected $fillable = [
         'id_siswa',
+        'kategori_kasus',
+        'kasus_detail',
         'tipe_tindakan',
         'tanggal_tindakan',
-        'keterangan'
+        'keterangan',
+        'tindakan_lanjut',
+        'foto_bukti'
     ];
 
     public function student()

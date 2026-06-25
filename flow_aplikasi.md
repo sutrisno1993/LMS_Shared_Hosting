@@ -15,6 +15,7 @@ Pusat komando LMS. Berfokus pada konfigurasi sistem, manajemen master data, dan 
 - **Konfigurasi**
   - `Jadwal JP`: Mengatur jam dinding (durasi fleksibel) untuk shift pagi/siang.
   - `Wali Kelas`: Memploting (menugaskan) guru menjadi Wali dari sebuah Rombongan Belajar.
+  - `Manajemen Piket`: Mengelola penugasan Guru Piket dengan antarmuka *Day-Centric* (Berbasis Hari). Satu guru dapat dicentang untuk bertugas di lebih dari 1 hari (misal: Senin & Kamis) untuk Shift Pagi/Siang.
   - `Import Siswa`: Upload CSV massal pendaftaran siswa.
   - `Manajemen Event & Libur`: Mengatur dispensasi KBM dengan fleksibilitas tinggi (Bisa spesifik pilih Tanggal, Target Jam Ke-, Target Shift, dan Target Kelas).
   - `Bobot Nilai`: Konfigurasi bobot penilaian (Sumatif vs Formatif).
@@ -22,6 +23,7 @@ Pusat komando LMS. Berfokus pada konfigurasi sistem, manajemen master data, dan 
 - **Laporan**
   - `Ketidakhadiran Guru` (`/admin/laporan-absen-guru`): Memonitor dan mencetak rekapitulasi riwayat guru yang tidak hadir (Alpa, Izin, Sakit, atau Tugas Luar) dalam rentang waktu tertentu.
   - `Evaluasi Wali Kelas` (`/admin/evaluasi-walikelas`): Memantau rekap hasil penilaian (kuesioner/rating) yang diberikan oleh murid terhadap kinerja wali kelas mereka masing-masing.
+  - `Laporan Kasus & Pembinaan Siswa` (`/admin/laporan-kasus-siswa`): Memantau rekapitulasi kasus siswa bermasalah (absensi, akademik, maupun perilaku seperti merokok, melawan guru, dll.) lengkap dengan riwayat kasus, jenis penanganannya (pembinaan pribadi, pemanggilan orang tua, home visit, SP 1/2/3), serta lampiran foto/gambar sebagai bukti fisik penanganan.
   - `Ekspor Rapor`: Mengunduh rekapitulasi nilai akhir seluruh sekolah.
 
 ### B. Tugas Utama
@@ -142,3 +144,6 @@ Pengembangan sistem LMS ini tidak sekadar untuk digitalisasi bahan ajar, melaink
 
 5. **Kepatuhan Total pada "Kurikulum Merdeka"**
    Aplikasi ini memaksa guru untuk mengajar secara terstruktur. Guru tidak bisa sekadar masuk kelas tanpa arah; mereka dituntut untuk melakukan **Pemetaan Materi (CP & TP)** di awal, dan setiap jurnal KBM serta asesmen *Live* harus terikat pada peta materi tersebut. Hal ini menjamin mutu pendidikan di SMK 11 Maret memenuhi standar nasional.
+
+6. **Pengalaman Pengguna (UI/UX) Tanpa Interupsi**
+   Semua notifikasi keberhasilan di seluruh sistem (baik panel Admin, Guru, Wali Kelas, maupun Siswa) distandardisasi menggunakan **Custom Toast / Snackbar Notifikasi Melayang** berwarna hijau yang hilang secara otomatis. Dilarang keras menggunakan pop-up `alert()` bawaan browser atau OS yang menghalangi produktivitas dan alur interaksi pengguna.

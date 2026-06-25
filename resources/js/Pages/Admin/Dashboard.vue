@@ -440,6 +440,7 @@ const navigation = [
   {
     label: 'Konfigurasi',
     items: [
+      { href: '/admin/piket', icon: '👮', label: 'Manajemen Piket' },
       { href: '/admin/jadwal-jp', icon: '⏰', label: 'Jadwal JP' },
       { href: '/admin/grade-config', icon: '⚖️', label: 'Bobot Nilai' },
       { href: '/admin/timeline', icon: '📅', label: 'Timeline' },
@@ -451,7 +452,9 @@ const navigation = [
       { href: '/admin/monitoring-nilai', icon: '📈', label: 'Monitoring Nilai' },
       { href: '/admin/rapor', icon: '📋', label: 'Ekspor Rapor' },
       { href: '/admin/laporan-performa', icon: '🏆', label: 'Laporan Performa' },
+      { href: '/admin/kehadiran-guru', icon: '📅', label: 'Kehadiran Guru' },
       { href: '/admin/jurnal', icon: '📓', label: 'Jurnal Tatap Muka' },
+      { href: '/admin/laporan-kasus-siswa', icon: '⚡', label: 'Laporan Kasus' },
     ],
   },
 ];

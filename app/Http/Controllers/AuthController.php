@@ -53,7 +53,14 @@ class AuthController extends Controller
 
         $user = \App\Models\User::where('id_guru', $teacher->id_guru)->first();
         if (!$user) {
-            return back()->withErrors(['no_wa' => 'Akun belum ditautkan ke sistem.']);
+            // Jika guru sudah ada di database tapi belum ditautkan ke user, kita buatkan otomatis
+            $user = \App\Models\User::create([
+                'name' => $teacher->nama_guru,
+                'email' => $teacher->no_wa . '@guru.lms.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+                'role' => 'TEACHER',
+                'id_guru' => $teacher->id_guru,
+            ]);
         }
 
         if (\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {

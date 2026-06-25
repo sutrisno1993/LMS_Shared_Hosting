@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <template v-for="section in navigation" :key="section.label">
+      <template v-for="section in resolvedNavigation" :key="section.label">
         <div v-if="showDetails" class="px-2 pt-4 pb-1.5 text-[10px] font-semibold text-slate-600 uppercase tracking-widest">
           {{ section.label }}
         </div>
@@ -199,6 +199,111 @@ const props = defineProps({
 });
 
 const page = usePage();
+
+const resolvedNavigation = computed(() => {
+  const url = page.url;
+  
+  if (url.startsWith('/admin')) {
+    return [
+      {
+        label: 'Utama',
+        items: [
+          { href: '/admin/dashboard', icon: '📊', label: 'Dashboard' },
+        ],
+      },
+      {
+        label: 'Sekolah',
+        items: [
+          { href: '/admin/wali-kelas', icon: '👤', label: 'Wali Kelas' },
+          { href: '/admin/siswa', icon: '👥', label: 'Data Siswa' },
+          { href: '/admin/events', icon: '🗓️', label: 'Event & Libur' },
+          { href: '/admin/kuesioner', icon: '⭐', label: 'Kuesioner Kinerja' },
+        ],
+      },
+      {
+        label: 'Konfigurasi',
+        items: [
+          { href: '/admin/piket', icon: '👮', label: 'Manajemen Piket' },
+          { href: '/admin/jadwal-jp', icon: '⏰', label: 'Jadwal JP' },
+          { href: '/admin/grade-config', icon: '⚖️', label: 'Bobot Nilai' },
+          { href: '/admin/timeline', icon: '📅', label: 'Timeline' },
+        ],
+      },
+      {
+        label: 'Laporan',
+        items: [
+          { href: '/admin/monitoring-nilai', icon: '📈', label: 'Monitoring Nilai' },
+          { href: '/admin/rapor', icon: '📋', label: 'Ekspor Rapor' },
+          { href: '/admin/laporan-performa', icon: '🏆', label: 'Laporan Performa' },
+          { href: '/admin/kehadiran-guru', icon: '📅', label: 'Kehadiran Guru' },
+          { href: '/admin/jurnal', icon: '📓', label: 'Jurnal Tatap Muka' },
+          { href: '/admin/laporan-kasus-siswa', icon: '⚡', label: 'Laporan Kasus' },
+        ],
+      },
+    ];
+  } else if (url.startsWith('/guru')) {
+    return [
+      {
+        label: 'KBM (Kegiatan Belajar Mengajar)',
+        items: [
+          { href: '/guru/dashboard', icon: '📊', label: 'Dashboard' },
+          { href: '/guru/jadwal', icon: '📅', label: 'Jadwal Mengajar' },
+          { href: '/guru/riwayat-jurnal', icon: '📜', label: 'Riwayat Jurnal Mengajar' },
+          { href: '/guru/materi', icon: '📁', label: 'Materi Pembelajaran' },
+        ],
+      },
+      {
+        label: 'Tugas Khusus',
+        items: [
+          { href: '/guru/tugas-piket', icon: '👮', label: 'Tugas Piket' },
+        ],
+      },
+      {
+        label: 'Evaluasi & Penilaian',
+        items: [
+          { href: '/guru/pemetaan-materi', icon: '🗺️', label: 'Pemetaan Materi' },
+          { href: '/guru/bank-soal', icon: '📝', label: 'Bank Soal & Ujian Live' },
+          { href: '/guru/nilai-sumatif', icon: '📊', label: 'Nilai Sumatif' },
+          { href: '/guru/nilai-akhir', icon: '📋', label: 'Nilai Akhir' },
+          { href: '/guru/rapor-preview', icon: '📑', label: 'Rapor Preview' },
+        ],
+      },
+    ];
+  } else if (url.startsWith('/walikelas')) {
+    return [
+      {
+        label: 'Perwalian',
+        items: [
+          { href: '/walikelas/dashboard', icon: '🏠', label: 'Dashboard Kelas' },
+          { href: '/walikelas/jurnal', icon: '📓', label: 'Jurnal KBM Kelas' },
+          { href: '/walikelas/pembinaan', icon: '⚡', label: 'Pembinaan & SP Siswa' },
+          { href: '/walikelas/p5-assessment', icon: '🌱', label: 'Asesmen P5' },
+        ],
+      },
+    ];
+  } else if (url.startsWith('/siswa')) {
+    return [
+      {
+        label: 'Akademik',
+        items: [
+          { href: '/siswa/dashboard', icon: '🏠', label: 'Beranda' },
+          { href: '/siswa/scan-qr', icon: '📷', label: 'Scan QR Presensi', badge: 'Live' },
+          { href: '/siswa/materi', icon: '📁', label: 'Materi Belajar' },
+          { href: '/siswa/jadwal', icon: '📅', label: 'Jadwal Kelas' },
+        ],
+      },
+      {
+        label: 'Laporan',
+        items: [
+          { href: '/siswa/nilai', icon: '📊', label: 'Nilai & Capaian' },
+          { href: '/siswa/kuesioner', icon: '📝', label: 'Evaluasi Pembelajaran' },
+        ],
+      },
+    ];
+  }
+  
+  return props.navigation;
+});
 
 const isMinimized = ref(false);
 const mobileSidebarOpen = ref(false);

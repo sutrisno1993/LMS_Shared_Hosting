@@ -740,4 +740,158 @@ class AdminController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Tampilkan Laporan Kasus & Pembinaan Siswa Terpusat
+     */
+    public function laporanKasusSiswa(Request $request)
+    {
+        $id_kelas = $request->input('id_kelas');
+        $kategori_kasus = $request->input('kategori_kasus');
+        $tipe_tindakan = $request->input('tipe_tindakan');
+
+        $query = \App\Models\StudentDiscipline::with(['student.clas.waliKelas'])
+            ->orderBy('tanggal_tindakan', 'desc')
+            ->orderBy('created_at', 'desc');
+
+        if ($id_kelas) {
+            $query->whereHas('student', function ($q) use ($id_kelas) {
+                $q->where('id_kelas', $id_kelas);
+            });
+        }
+
+        if ($kategori_kasus) {
+            $query->where('kategori_kasus', $kategori_kasus);
+        }
+
+        if ($tipe_tindakan) {
+            $query->where('tipe_tindakan', $tipe_tindakan);
+        }
+
+        $cases = $query->get()->map(function($item) {
+            return [
+                'id' => $item->id,
+                'nama_siswa' => $item->student->nama_siswa ?? 'Siswa Tidak Ditemukan',
+                'nis' => $item->student->nis ?? '-',
+                'nama_kelas' => $item->student->clas->nama_kelas ?? 'Tidak Diketahui',
+                'nama_wali' => $item->student->clas->waliKelas->nama_guru ?? 'Belum Diatur',
+                'kategori_kasus' => $item->kategori_kasus,
+                'kasus_detail' => $item->kasus_detail ?? '-',
+                'tipe_tindakan' => $item->tipe_tindakan,
+                'tanggal_tindakan' => $item->tanggal_tindakan,
+                'keterangan' => $item->keterangan ?? '-',
+                'tindakan_lanjut' => $item->tindakan_lanjut ?? '-',
+                'foto_bukti' => $item->foto_bukti,
+            ];
+        });
+
+        $classes = \App\Models\Clas::orderBy('nama_kelas')->get();
+
+        return Inertia::render('Admin/LaporanKasusSiswa', [
+            'cases' => $cases,
+            'classes' => $classes,
+            'filters' => [
+                'id_kelas' => $id_kelas ? (int)$id_kelas : null,
+                'kategori_kasus' => $kategori_kasus,
+                'tipe_tindakan' => $tipe_tindakan,
+            ]
+        ]);
+    }
+
+    /**
+     * Manajemen Penugasan Guru Piket
+     */
+    public function piketIndex()
+    {
+        $teachers = \App\Models\Teacher::orderBy('nama_guru')->get(['id_guru', 'nama_guru']);
+        $allTeachers = \App\Models\Teacher::get(['id_guru', 'piket_pagi', 'piket_siang']);
+        
+        $assignments = [
+            'PAGI' => ['SENIN' => null, 'SELASA' => null, 'RABU' => null, 'KAMIS' => null, 'JUMAT' => null, 'SABTU' => null],
+            'SIANG' => ['SENIN' => null, 'SELASA' => null, 'RABU' => null, 'KAMIS' => null, 'JUMAT' => null, 'SABTU' => null],
+        ];
+
+        foreach ($allTeachers as $t) {
+            $pagi = is_array($t->piket_pagi) ? $t->piket_pagi : [];
+            $siang = is_array($t->piket_siang) ? $t->piket_siang : [];
+            foreach ($pagi as $hari) {
+                if (array_key_exists($hari, $assignments['PAGI'])) {
+                    $assignments['PAGI'][$hari] = $t->id_guru;
+                }
+            }
+            foreach ($siang as $hari) {
+                if (array_key_exists($hari, $assignments['SIANG'])) {
+                    $assignments['SIANG'][$hari] = $t->id_guru;
+                }
+            }
+        }
+
+        return Inertia::render('Admin/ManajemenPiket', [
+            'teachers' => $teachers,
+            'initialAssignments' => $assignments,
+        ]);
+    }
+
+    public function updatePiket(Request $request)
+    {
+        $request->validate([
+            'assignments' => 'required|array',
+            'assignments.PAGI' => 'required|array',
+            'assignments.SIANG' => 'required|array',
+        ]);
+
+        $assignments = $request->assignments;
+        
+        // Rebuild mapping: id_guru => ['piket_pagi' => [], 'piket_siang' => []]
+        $teacherMap = [];
+        foreach (['PAGI', 'SIANG'] as $shift) {
+            foreach ($assignments[$shift] as $hari => $id_guru) {
+                if ($id_guru) {
+                    if (!isset($teacherMap[$id_guru])) {
+                        $teacherMap[$id_guru] = ['piket_pagi' => [], 'piket_siang' => []];
+                    }
+                    if ($shift === 'PAGI') {
+                        $teacherMap[$id_guru]['piket_pagi'][] = $hari;
+                    } else {
+                        $teacherMap[$id_guru]['piket_siang'][] = $hari;
+                    }
+                }
+            }
+        }
+
+        $allTeachers = \App\Models\Teacher::all();
+        foreach ($allTeachers as $t) {
+            $needsSave = false;
+            if (isset($teacherMap[$t->id_guru])) {
+                $t->piket_pagi = $teacherMap[$t->id_guru]['piket_pagi'];
+                $t->piket_siang = $teacherMap[$t->id_guru]['piket_siang'];
+                $needsSave = true;
+            } else {
+                if (!empty($t->piket_pagi) || !empty($t->piket_siang)) {
+                    $t->piket_pagi = [];
+                    $t->piket_siang = [];
+                    $needsSave = true;
+                }
+            }
+            if ($needsSave) {
+                $t->save();
+            }
+        }
+
+        return redirect()->back()->with('success', 'Jadwal piket berhasil diperbarui!');
+    }
+
+    public function kehadiranGuruIndex(Request $request)
+    {
+        $tanggal = $request->input('tanggal', now()->toDateString());
+        
+        $attendances = \App\Models\TeacherAttendance::with('teacher')
+            ->where('tanggal', $tanggal)
+            ->get();
+            
+        return Inertia::render('Admin/KehadiranGuru', [
+            'tanggal' => $tanggal,
+            'attendances' => $attendances
+        ]);
+    }
 }

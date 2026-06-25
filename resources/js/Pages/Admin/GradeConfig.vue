@@ -97,12 +97,20 @@
       </div>
 
     </div>
+
+    <!-- Custom Toast -->
+    <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-2" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-2">
+      <div v-if="toastMessage" class="fixed bottom-6 right-6 bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 border border-emerald-400">
+        <span class="text-xl">✅</span>
+        <span class="font-bold text-sm">{{ toastMessage }}</span>
+      </div>
+    </transition>
   </AppLayout>
 </template>
 
 <script setup>
 import { Head, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
@@ -119,9 +127,28 @@ const totalBobot = computed(() => {
   return Number(form.bobot_formatif) + Number(form.bobot_sumatif) + Number(form.bobot_absensi);
 });
 
+const toastMessage = ref('');
+let toastTimeout = null;
+
+const showToast = (msg) => {
+  toastMessage.value = msg;
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toastMessage.value = '';
+  }, 3000);
+};
+
 const submit = () => {
   if (totalBobot.value !== 100) return;
-  form.post('/admin/grade-config');
+  form.post('/admin/grade-config', {
+    preserveScroll: true,
+    onSuccess: () => {
+      showToast('Konfigurasi bobot berhasil disimpan!');
+    },
+    onError: () => {
+      alert('Terjadi kesalahan saat menyimpan bobot.');
+    }
+  });
 };
 
 const navigation = [

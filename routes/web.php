@@ -117,6 +117,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/monitoring-nilai', [\App\Http\Controllers\AdminController::class, 'monitoringNilai'])->name('monitoring-nilai');
     Route::get('/laporan-performa', [\App\Http\Controllers\AdminController::class, 'laporanPerforma'])->name('laporan-performa');
     Route::get('/jurnal', [\App\Http\Controllers\AdminController::class, 'jurnalIndex'])->name('jurnal.index');
+    Route::get('/laporan-kasus-siswa', [\App\Http\Controllers\AdminController::class, 'laporanKasusSiswa'])->name('laporan-kasus-siswa');
+    
+    // Manajemen Guru Piket
+    Route::get('/piket', [\App\Http\Controllers\AdminController::class, 'piketIndex'])->name('piket.index');
+    Route::post('/piket', [\App\Http\Controllers\AdminController::class, 'updatePiket'])->name('piket.update');
+    Route::get('/kehadiran-guru', [\App\Http\Controllers\AdminController::class, 'kehadiranGuruIndex'])->name('kehadiran-guru.index');
 });
 
 // Guru routes
@@ -133,6 +139,9 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('guru')->name('guru.')->grou
     Route::get('/jadwal', [\App\Http\Controllers\GuruController::class, 'jadwal'])->name('jadwal');
     
     // Fitur KBM Tambahan
+    Route::get('/tugas-piket', [\App\Http\Controllers\GuruPiketController::class, 'index'])->name('tugas-piket');
+    Route::post('/tugas-piket/absensi', [\App\Http\Controllers\GuruPiketController::class, 'simpanAbsensiGuru'])->name('tugas-piket.absensi');
+    
     Route::get('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'pemetaanMateri'])->name('pemetaan-materi');
     Route::post('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'simpanPemetaanMateri']);
     Route::delete('/pemetaan-materi/{id_tp}', [\App\Http\Controllers\GuruController::class, 'hapusPemetaanMateri'])->name('pemetaan-materi.delete');

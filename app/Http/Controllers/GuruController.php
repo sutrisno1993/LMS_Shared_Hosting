@@ -93,9 +93,21 @@ class GuruController extends Controller
             })
             ->values();
 
+        // Cek apakah guru ini piket hari ini
+        $isPiketToday = false;
+        $teacherInfo = \App\Models\Teacher::find($user->id_guru);
+        if ($teacherInfo) {
+            $piketPagi = is_array($teacherInfo->piket_pagi) ? $teacherInfo->piket_pagi : [];
+            $piketSiang = is_array($teacherInfo->piket_siang) ? $teacherInfo->piket_siang : [];
+            if (in_array($hariEnum, $piketPagi) || in_array($hariEnum, $piketSiang)) {
+                $isPiketToday = true;
+            }
+        }
+
         return Inertia::render('Guru/Dashboard', [
             'jadwal' => $formattedJadwal,
             'mapelDiampu' => $mapelDiampu,
+            'isPiketToday' => $isPiketToday,
         ]);
     }
 

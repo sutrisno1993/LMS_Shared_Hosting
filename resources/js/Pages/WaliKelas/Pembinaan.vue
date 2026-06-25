@@ -85,7 +85,7 @@
           <div class="rounded-2xl border border-white/8 bg-[#1E293B] p-5 shadow-lg">
             <h3 class="font-bold text-sm text-white mb-4">Riwayat Tindakan Pembinaan & SP</h3>
 
-            <div class="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+            <div class="space-y-4 max-h-[550px] overflow-y-auto pr-1">
               <div v-if="disciplineHistory.length === 0" class="text-center py-8 text-xs text-slate-500">
                 Belum ada riwayat tindakan pembinaan yang dicatat.
               </div>
@@ -98,15 +98,36 @@
                 <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{{ action.tanggal_tindakan }}</div>
                 <div class="mt-1 font-bold text-sm text-white">{{ action.student ? action.student.nama_siswa : 'Siswa Tidak Ditemukan' }}</div>
                 
-                <div class="mt-2.5">
+                <div class="mt-2.5 flex flex-wrap gap-1.5">
+                  <span class="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-500/20 text-slate-400 border border-slate-500/30">
+                    {{ action.kategori_kasus || 'ABSENSI' }}
+                  </span>
                   <span class="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider" :class="getBadgeClass(action.tipe_tindakan)">
                     {{ getActionLabel(action.tipe_tindakan) }}
                   </span>
                 </div>
 
-                <p v-if="action.keterangan" class="mt-2.5 text-xs text-slate-400 border-t border-white/5 pt-2 italic">
-                  "{{ action.keterangan }}"
-                </p>
+                <div v-if="action.kasus_detail" class="mt-2.5 text-xs text-slate-300">
+                  <span class="text-[10px] font-bold text-slate-500 block uppercase tracking-wide">Pelanggaran/Kasus:</span>
+                  <p class="mt-0.5">{{ action.kasus_detail }}</p>
+                </div>
+
+                <div v-if="action.keterangan" class="mt-2.5 text-xs text-slate-300">
+                  <span class="text-[10px] font-bold text-slate-500 block uppercase tracking-wide">Catatan Pembinaan:</span>
+                  <p class="mt-0.5 text-slate-400 italic">"{{ action.keterangan }}"</p>
+                </div>
+
+                <div v-if="action.tindakan_lanjut" class="mt-2.5 text-xs text-slate-300">
+                  <span class="text-[10px] font-bold text-slate-500 block uppercase tracking-wide">Rencana Tindak Lanjut:</span>
+                  <p class="mt-0.5 text-indigo-300">{{ action.tindakan_lanjut }}</p>
+                </div>
+
+                <div v-if="action.foto_bukti" class="mt-3 border-t border-white/5 pt-2">
+                  <span class="text-[10px] font-bold text-slate-500 block mb-1">Bukti Fisik:</span>
+                  <a :href="action.foto_bukti" target="_blank" class="inline-block overflow-hidden rounded-lg border border-white/10 hover:border-indigo-500/40 transition-all max-w-[120px]">
+                    <img :src="action.foto_bukti" class="object-cover w-full h-16 hover:scale-105 transition-transform" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -116,42 +137,87 @@
 
     <!-- MODAL TINDAKAN PEMBINAAN -->
     <div v-if="showModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="bg-[#1E293B] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+      <div class="bg-[#1E293B] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         <div class="px-5 py-4 border-b border-white/8 bg-white/2 flex items-center justify-between">
-          <h3 class="font-bold text-sm text-white">Catat Tindakan Disiplin</h3>
+          <h3 class="font-bold text-sm text-white">Catat Tindakan Pembinaan & SP</h3>
           <button @click="showModal = false" class="text-slate-400 hover:text-white text-lg">×</button>
         </div>
 
-        <form @submit.prevent="submitTindakan" class="p-5 space-y-4">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Siswa</label>
-            <input type="text" :value="selectedStudent.nama" readonly class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-400 outline-none" />
+        <form @submit.prevent="submitTindakan" class="p-5 space-y-4 overflow-y-auto flex-1">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nama Siswa</label>
+              <input type="text" :value="selectedStudent.nama" readonly class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-400 outline-none" />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Kategori Masalah</label>
+              <select v-model="form.kategori_kasus" class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-500">
+                <option value="ABSENSI">Absensi (Kehadiran)</option>
+                <option value="AKADEMIK">Akademik (Tugas/Nilai)</option>
+                <option value="PERILAKU">Perilaku (Kedisiplinan/Sikap)</option>
+              </select>
+            </div>
           </div>
 
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Jenis Tindakan / SP</label>
-            <select v-model="form.tipe_tindakan" class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-500">
-              <option value="PEMBINAAN_PRIBADI">Pembinaan Pribadi</option>
-              <option value="PEMBINAAN_PERSONAL">Pembinaan Personal</option>
-              <option value="PEMANGGILAN_ORTU">Pemanggilan Orang Tua</option>
-              <option value="SP_1">Surat Peringatan 1 (SP 1)</option>
-              <option value="SP_2">Surat Peringatan 2 (SP 2)</option>
-              <option value="SP_3">Surat Peringatan 3 (SP 3)</option>
-              <option value="PERJANJIAN_TIDAK_NAIK">Surat Pernyataan Siap Tidak Naik Kelas</option>
-            </select>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Detail Kasus / Pelanggaran</label>
+            <textarea v-model="form.kasus_detail" rows="2" placeholder="Contoh: Merokok di kantin belakang, tidak mengumpulkan tugas SAS, dll..." class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-indigo-500"></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Jenis Tindakan / SP</label>
+              <select v-model="form.tipe_tindakan" class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-500">
+                <option value="PEMBINAAN_PRIBADI">Pembinaan Pribadi</option>
+                <option value="PEMBINAAN_PERSONAL">Pembinaan Personal</option>
+                <option value="PEMANGGILAN_ORTU">Pemanggilan Orang Tua</option>
+                <option value="HOME_VISIT">Kunjungan Rumah (Home Visit)</option>
+                <option value="SP_1">Surat Peringatan 1 (SP 1)</option>
+                <option value="SP_2">Surat Peringatan 2 (SP 2)</option>
+                <option value="SP_3">Surat Peringatan 3 (SP 3)</option>
+                <option value="PERJANJIAN_TIDAK_NAIK">Perjanjian Siap Tidak Naik Kelas</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tanggal Tindakan</label>
+              <input type="date" v-model="form.tanggal_tindakan" class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-500" />
+            </div>
           </div>
 
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tanggal Tindakan</label>
-            <input type="date" v-model="form.tanggal_tindakan" class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-indigo-500" />
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Catatan Pembinaan / Solusi</label>
+            <textarea v-model="form.keterangan" rows="2" placeholder="Tulis rincian pembinaan atau kesepakatan di sini..." class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-indigo-500"></textarea>
           </div>
 
           <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Keterangan / Catatan Pembinaan</label>
-            <textarea v-model="form.keterangan" rows="3" placeholder="Tulis rincian pembinaan atau kesepakatan di sini..." class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-indigo-500"></textarea>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Rencana Tindak Lanjut</label>
+            <input type="text" v-model="form.tindakan_lanjut" placeholder="Contoh: Pemantauan kehadiran 1 minggu, pengerjaan tugas susulan..." class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-indigo-500" />
           </div>
 
-          <div class="pt-2 flex items-center justify-end gap-3">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Foto Bukti Fisik Penanganan</label>
+            <div class="mt-1 flex items-center gap-4">
+              <input type="file" accept="image/*" @change="handleFileChange" class="hidden" ref="fileInput" />
+              <button type="button" @click="$refs.fileInput.click()" class="px-4 py-2 border border-dashed border-white/15 hover:border-indigo-500 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all bg-[#111827]">
+                📸 Pilih / Ambil Foto
+              </button>
+              <span v-if="form.foto_bukti" class="text-xs text-indigo-400 truncate max-w-[200px]">
+                {{ form.foto_bukti.name }}
+              </span>
+            </div>
+            
+            <!-- Preview Image -->
+            <div v-if="imagePreview" class="mt-3 relative w-32 h-32 rounded-xl overflow-hidden border border-white/10">
+              <img :src="imagePreview" class="w-full h-full object-cover" />
+              <button type="button" @click="clearImage" class="absolute top-1.5 right-1.5 bg-black/75 hover:bg-black w-6 h-6 rounded-full flex items-center justify-center text-xs text-white">
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-white/5 flex items-center justify-end gap-3">
             <button type="button" @click="showModal = false" class="px-4 py-2 border border-white/10 hover:bg-white/5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all">
               Batal
             </button>
@@ -162,6 +228,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Custom Toast -->
+    <transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 translate-y-2" enter-to-class="transform opacity-100 translate-y-0" leave-active-class="transition ease-in duration-200" leave-from-class="transform opacity-100 translate-y-0" leave-to-class="transform opacity-0 translate-y-2">
+      <div v-if="toastMessage" class="fixed bottom-6 right-6 bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 border border-emerald-400">
+        <span class="text-xl">✅</span>
+        <span class="font-bold text-sm">{{ toastMessage }}</span>
+      </div>
+    </transition>
   </AppLayout>
 </template>
 
@@ -191,6 +265,8 @@ const navigation = [
 
 const showModal = ref(false);
 const selectedStudent = ref(null);
+const fileInput = ref(null);
+const imagePreview = ref(null);
 
 const filterForm = useForm({
   semester: props.filters.semester || 'GANJIL',
@@ -199,9 +275,13 @@ const filterForm = useForm({
 
 const form = useForm({
   id_siswa: null,
+  kategori_kasus: 'ABSENSI',
+  kasus_detail: '',
   tipe_tindakan: 'PEMBINAAN_PRIBADI',
   tanggal_tindakan: new Date().toISOString().split('T')[0],
   keterangan: '',
+  tindakan_lanjut: '',
+  foto_bukti: null,
 });
 
 const criticalStudents = computed(() => {
@@ -220,18 +300,56 @@ const applyFilter = () => {
 const bukaModalTindakan = (siswa) => {
   selectedStudent.value = siswa;
   form.id_siswa = siswa.id_siswa;
+  form.kategori_kasus = siswa.alpa >= 3 ? 'ABSENSI' : 'PERILAKU';
+  form.kasus_detail = siswa.alpa >= 3 ? `Ketidakhadiran tanpa keterangan mencapai ${siswa.alpa} kali.` : '';
   form.tipe_tindakan = siswa.alpa >= 5 ? 'SP_2' : (siswa.alpa >= 3 ? 'SP_1' : 'PEMBINAAN_PRIBADI');
   form.tanggal_tindakan = new Date().toISOString().split('T')[0];
   form.keterangan = '';
+  form.tindakan_lanjut = '';
+  form.foto_bukti = null;
+  imagePreview.value = null;
   showModal.value = true;
 };
 
+const handleFileChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    form.foto_bukti = file;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      imagePreview.value = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const clearImage = () => {
+  form.foto_bukti = null;
+  imagePreview.value = null;
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
+};
+
+const toastMessage = ref('');
+let toastTimeout = null;
+
+const showToast = (msg) => {
+  toastMessage.value = msg;
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toastMessage.value = '';
+  }, 3000);
+};
+
 const submitTindakan = () => {
+  // Post as multipart/form-data
   form.post('/walikelas/pembinaan', {
     preserveScroll: true,
+    forceFormData: true,
     onSuccess: () => {
       showModal.value = false;
-      alert('Tindakan disiplin berhasil dicatat!');
+      showToast('Tindakan pembinaan berhasil dicatat!');
     }
   });
 };
@@ -241,7 +359,7 @@ const hapusTindakan = (id) => {
     router.delete(`/walikelas/pembinaan/${id}`, {
       preserveScroll: true,
       onSuccess: () => {
-        alert('Catatan pembinaan berhasil dihapus.');
+        showToast('Catatan pembinaan berhasil dihapus.');
       }
     });
   }
@@ -252,6 +370,7 @@ const getActionLabel = (type) => {
     'PEMBINAAN_PRIBADI': 'Pembinaan Pribadi',
     'PEMBINAAN_PERSONAL': 'Pembinaan Personal',
     'PEMANGGILAN_ORTU': 'Pemanggilan Orang Tua',
+    'HOME_VISIT': 'Home Visit (Kunjungan)',
     'SP_1': 'Surat Peringatan 1 (SP 1)',
     'SP_2': 'Surat Peringatan 2 (SP 2)',
     'SP_3': 'Surat Peringatan 3 (SP 3)',
@@ -266,6 +385,9 @@ const getBadgeClass = (type) => {
   }
   if (type === 'PEMANGGILAN_ORTU') {
     return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+  }
+  if (type === 'HOME_VISIT') {
+    return 'bg-purple-500/20 text-purple-400 border border-purple-500/30';
   }
   return 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
 };

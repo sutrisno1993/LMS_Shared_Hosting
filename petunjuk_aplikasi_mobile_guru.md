@@ -27,7 +27,16 @@ Aplikasi mobile menggunakan navigasi bawah (*Bottom Navigation Bar*) untuk akses
 1. **Beranda (Dashboard)**: Ringkasan aktivitas hari ini, jadwal mengajar aktif, dan statistik kelas perwalian.
 2. **Jurnal KBM**: Input jurnal pembelajaran harian secara cepat.
 3. **Asesmen P5**: Evaluasi dan penilaian projek profil pelajar Pancasila.
-4. **Pembinaan Siswa**: Monitoring poin pelanggaran dan pembuatan surat peringatan (SP).
+4. **Pembinaan Siswa**: Monitoring poin pelanggaran dan pembuatan surat peringatan (SP) *(Hanya tampil jika Guru = Wali Kelas)*.
+
+> [!NOTE]
+> **Logika Visibilitas Menu (Role-based UI):**
+> * **Guru Biasa (Bukan Wali Kelas)**: Menu **Pembinaan Siswa** pada *Bottom Navigation* disembunyikan (atau dinonaktifkan). Pada halaman *Beranda*, kartu ringkasan kelas perwalian (Jumlah Siswa, Rapor Kelas, dll.) juga tidak ditampilkan.
+> * **Wali Kelas**: Semua menu dan komponen di atas akan ditampilkan secara penuh.
+
+### Menu Drawer (Fitur Tambahan):
+* **Pemetaan Materi**: Kelola Elemen Pembelajaran, Capaian Pembelajaran (CP), Tujuan Pembelajaran (TP), dan Sub-Materi (Topik) per Mata Pelajaran.
+* **Tugas Piket**: Mengelola presensi Guru Piket. Menggunakan sistem *Multi-Hari* di mana seorang guru bisa ditugaskan piket pada lebih dari 1 hari. Menu ini akan dinamis menampilkan shift pagi/siang sesuai jadwal hari berjalan guru tersebut.
 
 ---
 
@@ -162,6 +171,7 @@ Karena pengisian deskripsi projek bisa cukup panjang, antarmuka mobile harus dir
 Fitur penting bagi guru mata pelajaran untuk mencatat KBM secara real-time langsung dari ruang kelas.
 * **Penyajian Data**:
   * **Deteksi Jadwal Otomatis**: Secara otomatis mendeteksi hari dan jam mengajar aktif guru berdasarkan jam server saat aplikasi dibuka.
+  * **Pemilihan Topik/Materi Terintegrasi**: Input materi KBM tidak hanya berupa teks manual, melainkan guru dapat memilih secara cepat dari daftar sub-materi/topik yang telah dipetakan pada menu *Pemetaan Materi*.
   * **Form Presensi Cepat**: Menampilkan daftar nama siswa di kelas tersebut dengan tombol status kehadiran langsung tap: `Hadir` (Default - Hijau), `Sakit` (Kuning), `Izin` (Biru), `Alfa` (Merah).
   * **Offline Sync**: Jika kelas tidak memiliki sinyal internet stabil, simpan data presensi dan jurnal di database lokal (SQLite/Hive). Ketika koneksi kembali pulih, tampilkan indikator "Sinkronisasi Data" dan kirim data secara latar belakang (*Background Sync*).
 * **Integrasi API**: `POST /api/teacher/jurnal-kbm`
@@ -169,6 +179,7 @@ Fitur penting bagi guru mata pelajaran untuk mencatat KBM secara real-time langs
     ```json
     {
       "jadwal_id": 45,
+      "id_topic": 12,
       "materi": "Pengenalan Routing Dinamis OSPF",
       "catatan": "KBM berjalan kondusif, praktik konfigurasi selesai tepat waktu.",
       "presensi": [
@@ -182,15 +193,18 @@ Fitur penting bagi guru mata pelajaran untuk mencatat KBM secara real-time langs
 ---
 
 ### E. Menu Pembinaan & SP Siswa (Tindakan Wali Kelas)
-Fitur untuk memantau siswa bermasalah secara akademis maupun non-akademis (ketidakhadiran tinggi/poin pelanggaran).
-* **Penyajian Data**:
-  * Urutkan daftar siswa dengan prioritas penanganan tertinggi (jumlah alfa terbanyak atau poin pelanggaran tertinggi diletakkan di paling atas).
-  * **Tombol Aksi Pembinaan**: Setiap siswa memiliki tombol aksi cepat untuk:
-    * Mencatat Pembinaan Pribadi/Personal.
-    * Pemanggilan Orang Tua.
-    * Mengajukan/Menerbitkan Surat Peringatan (SP 1, SP 2, SP 3).
-    * Membuat Surat Perjanjian "Siap Tidak Naik Kelas".
-  * **Ekspor Dokumen**: Integrasikan opsi untuk mengekspor Surat SP ke dalam file PDF agar guru dapat langsung membagikan surat tersebut melalui WhatsApp Group/Wali Murid langsung dari aplikasi.
+Fitur untuk memantau, mencatat, dan menangani kasus siswa kelas perwalian yang bermasalah, baik terkait absensi, akademik, maupun perilaku/kedisiplinan.
+* **Penyajian Data & Kategori Kasus**:
+  * **Kategori Kasus**: Kasus yang dicatat meliputi:
+    * **Absensi**: Ketidakhadiran tanpa keterangan (Alfa) yang melebihi batas.
+    * **Akademik**: Tidak mengerjakan tugas, nilai di bawah KKM berulang kali.
+    * **Perilaku/Kedisiplinan**: Merokok di sekolah, melawan guru, atribut tidak lengkap, berkelahi, dll.
+  * **Riwayat Kasus Siswa**: Halaman detail siswa menampilkan daftar kronologis kasus yang pernah dilakukan beserta status penanganannya.
+  * **Detail Penanganan & Bukti Gambar (Upload Foto)**: Setiap tindakan penanganan wajib disertai dengan unggahan foto/gambar sebagai bukti autentik penanganan di lapangan. Pilihan jenis penanganan meliputi:
+    * **Pembinaan Pribadi**: Konseling empat mata antara Wali Kelas dan siswa (bukti: foto sesi pembinaan).
+    * **Pemanggilan Orang Tua**: Pertemuan resmi wali kelas, siswa, dan orang tua di sekolah (bukti: foto pertemuan / dokumen berita acara).
+    * **Home Visit (Kunjungan Rumah)**: Wali kelas mengunjungi kediaman orang tua siswa (bukti: foto bersama orang tua di rumah).
+    * **Pemberian Surat Peringatan (SP 1, SP 2, SP 3)**: Penerbitan surat peringatan resmi (bukti: foto surat SP yang sudah ditandatangani basah oleh orang tua dan bermaterai).
 * **Integrasi API**: `GET /api/walikelas/pembinaan-logs`
   * **Skema JSON Response**:
     ```json
@@ -201,22 +215,113 @@ Fitur untuk memantau siswa bermasalah secara akademis maupun non-akademis (ketid
           "id_log": 201,
           "siswa_id": 3,
           "nama_siswa": "Hendri Caket Sihombing",
-          "jenis_tindakan": "SP 1",
+          "kategori_kasus": "Perilaku",
+          "kasus_detail": "Ketahuan merokok di belakang laboratorium komputer saat jam istirahat.",
+          "jenis_tindakan": "Home Visit",
           "tanggal": "2026-06-25",
-          "keterangan": "Ketidakhadiran Alfa mencapai 5 kali.",
-          "status_dokumen": "Tandatangan Basah / Siap PDF"
+          "keterangan": "Melakukan kunjungan rumah untuk klarifikasi dan koordinasi dengan orang tua.",
+          "foto_bukti": "https://lms11maret.sch.id/storage/bukti-pembinaan/visit_hendri_20260625.jpg",
+          "status_dokumen": "Dokumen Terverifikasi"
         }
       ]
     }
     ```
 * **Integrasi API**: `POST /api/walikelas/pembinaan/action`
-  * **Skema JSON Request**:
+  * **Format Request**: `multipart/form-data`
+  * **Skema Parameter Request**:
     ```json
     {
       "siswa_id": 3,
-      "jenis_tindakan": "SP 1",
-      "keterangan": "Siswa tidak hadir tanpa keterangan selama 5 kali KBM.",
-      "tindakan_lanjut": "Pemanggilan orang tua pada hari Senin depan."
+      "kategori_kasus": "Perilaku", 
+      "kasus_detail": "Merokok di area sekolah",
+      "jenis_tindakan": "Home Visit",
+      "keterangan": "Melakukan kunjungan rumah bersama guru BK.",
+      "tindakan_lanjut": "Orang tua berjanji akan mengawasi pergaulan anak di rumah.",
+      "foto_bukti": "[File Gambar / Upload dari Kamera Ponsel]"
+    }
+    ```
+
+---
+
+### F. Pemetaan Materi (CP & TP)
+Fitur untuk mengelola pemetaan kurikulum merdeka (Elemen, CP, TP, dan Sub-Materi/Topik) yang diampu oleh Guru.
+* **Penyajian Data & Alur Kerja**:
+  * **Halaman Utama Pemetaan**: Menampilkan daftar Elemen yang telah dibuat dengan visualisasi berbentuk kartu lipat (*Accordion/Expandable List*). Setiap kartu menampilkan nama elemen, CP, dan daftar TP di dalamnya.
+  * **Penyaring Kelas & Mapel**: Di bagian atas terdapat drop-down filter untuk memilih Mata Pelajaran dan Kelas yang diampu oleh Guru.
+  * **Form Tambah/Edit Elemen**: Form input bersih menggunakan *Single-page Form* untuk data Elemen (Nama Elemen, Deskripsi CP) dan komponen dinamis *List View* di bawahnya untuk menambahkan multi-TP.
+  * **Kelola Tujuan Pembelajaran (TP)**: Di setiap item TP, guru dapat menentukan kode TP, deskripsi TP, semester (Ganjil/Genap), memilih target kelas (menggunakan *Multi-select Chip*), dan menambah daftar sub-materi/topik (berbasis chip dinamis yang bisa ditambah atau dihapus).
+* **Integrasi API**: `GET /api/teacher/pemetaan-materi`
+  * **Skema JSON Response**:
+    ```json
+    {
+      "success": true,
+      "data": {
+        "kelasMapelList": [
+          {
+            "id_kelas": 1,
+            "nama_kelas": "X TKJ 2",
+            "id_mapel": 101,
+            "nama_mapel": "Matematika"
+          }
+        ],
+        "elementsList": [
+          {
+            "id_element": 12,
+            "id_mapel": 101,
+            "nama_elemen": "Aljabar dan Fungsi",
+            "deskripsi_cp": "Siswa mampu memahami, memodelkan, dan menyelesaikan masalah terkait persamaan aljabar.",
+            "tps": [
+              {
+                "id_tp": 45,
+                "kode_tp": "TP 1.1",
+                "deskripsi_tp": "Menjelaskan konsep dasar persamaan linear dua variabel",
+                "semester": "GANJIL",
+                "target_kelas": [1, 2],
+                "topics": [
+                  { "id_topic": 1, "nama_topik": "Persamaan Linear" },
+                  { "id_topic": 2, "nama_topik": "Eliminasi & Substitusi" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+    ```
+* **Integrasi API**: `POST /api/teacher/pemetaan-materi/store`
+  * **Skema JSON Request**:
+    ```json
+    {
+      "id_element": 12,
+      "id_mapel": 101,
+      "nama_elemen": "Aljabar dan Fungsi",
+      "deskripsi_cp": "Siswa mampu memahami, memodelkan, dan menyelesaikan masalah terkait persamaan aljabar.",
+      "tps": [
+        {
+          "id_tp": 45,
+          "kode_tp": "TP 1.1",
+          "deskripsi_tp": "Menjelaskan konsep dasar persamaan linear dua variabel",
+          "semester": "GANJIL",
+          "target_kelas": [1, 2],
+          "topics": ["Persamaan Linear", "Eliminasi & Substitusi"]
+        }
+      ]
+    }
+    ```
+* **Integrasi API**: `DELETE /api/teacher/pemetaan-materi/element/{id_element}`
+  * **Skema JSON Response**:
+    ```json
+    {
+      "success": true,
+      "message": "Elemen Pembelajaran berhasil dihapus."
+    }
+    ```
+* **Integrasi API**: `DELETE /api/teacher/pemetaan-materi/tp/{id_tp}`
+  * **Skema JSON Response**:
+    ```json
+    {
+      "success": true,
+      "message": "Tujuan Pembelajaran berhasil dihapus."
     }
     ```
 
@@ -236,6 +341,7 @@ Untuk meningkatkan fungsionalitas, aplikasi mobile guru harus dilengkapi dengan 
 
 ## 6. Desain Antarmuka (UI/UX) Premium
 * **Font**: Gunakan font modern seperti **Inter** atau **Outfit** untuk keterbacaan data numerik (angka nilai rapor) yang jelas.
+* **Custom Toast / Snackbar (Notifikasi Sukses)**: Seluruh umpan balik penyelesaian aksi (seperti Simpan Nilai, Catat Tindakan Pembinaan, Simpan Pemetaan Materi) **wajib** menggunakan *Toast Notification* atau *Snackbar* berwarna hijau yang melayang di bagian bawah/atas layar dan hilang otomatis dalam 3 detik. **Dilarang** menggunakan pop-up dialog/alert sistem bawaan yang mengganggu alur (*flow*) interaksi.
 * **Feedback Sentuhan (Haptic Feedback)**: Berikan getaran halus saat guru mengubah status kehadiran siswa atau memberikan nilai remedi untuk memperkuat konfirmasi input.
 * **Skeleton Loader**: Tampilkan efek bayangan animasi (*shimmer effect*) saat memuat daftar nilai siswa, hindari penggunaan spinner loading tradisional berputar yang membosankan.
 

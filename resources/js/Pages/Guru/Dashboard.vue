@@ -23,8 +23,13 @@
             <h2 class="text-base font-bold">Jadwal Hari Ini</h2>
             <p class="text-xs text-slate-500">{{ todayLabel }}</p>
           </div>
-          <div class="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full text-xs font-semibold text-indigo-400">
-            {{ jadwalList.length }} sesi mengajar
+          <div class="flex items-center gap-3">
+            <a v-if="isPiketToday" href="/guru/tugas-piket" class="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] animate-pulse hover:animate-none">
+              👮 Laksanakan Tugas Piket
+            </a>
+            <div class="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full text-xs font-semibold text-indigo-400">
+              {{ jadwalList.length }} sesi mengajar
+            </div>
           </div>
         </div>
 
@@ -239,6 +244,7 @@ const props = defineProps({
   jadwal: Array,
   hariIni: String,
   mapelDiampu: Array,
+  isPiketToday: Boolean,
 });
 
 // Live clock

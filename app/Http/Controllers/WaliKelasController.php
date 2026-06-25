@@ -332,16 +332,32 @@ class WaliKelasController extends Controller
     {
         $request->validate([
             'id_siswa' => 'required|exists:students,id_siswa',
+            'kategori_kasus' => 'required|string|in:ABSENSI,AKADEMIK,PERILAKU',
+            'kasus_detail' => 'nullable|string',
             'tipe_tindakan' => 'required|string',
             'tanggal_tindakan' => 'required|date',
             'keterangan' => 'nullable|string',
+            'tindakan_lanjut' => 'nullable|string',
+            'foto_bukti' => 'nullable|image|max:2048', // Max 2MB
         ]);
+
+        $fotoPath = null;
+        if ($request->hasFile('foto_bukti')) {
+            $file = $request->file('foto_bukti');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->move(public_path('storage/bukti-pembinaan'), $filename);
+            $fotoPath = '/storage/bukti-pembinaan/' . $filename;
+        }
 
         \App\Models\StudentDiscipline::create([
             'id_siswa' => $request->id_siswa,
+            'kategori_kasus' => $request->kategori_kasus,
+            'kasus_detail' => $request->kasus_detail,
             'tipe_tindakan' => $request->tipe_tindakan,
             'tanggal_tindakan' => $request->tanggal_tindakan,
             'keterangan' => $request->keterangan,
+            'tindakan_lanjut' => $request->tindakan_lanjut,
+            'foto_bukti' => $fotoPath,
         ]);
 
         return redirect()->back()->with('message', 'Tindakan pembinaan berhasil dicatat.');
