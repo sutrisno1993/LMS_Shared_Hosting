@@ -95,7 +95,14 @@ class AuthController extends Controller
 
         $user = \App\Models\User::where('id_siswa', $student->id_siswa)->first();
         if (!$user) {
-            return back()->withErrors(['nisn' => 'Akun belum ditautkan ke sistem.']);
+            // Jika siswa sudah ada di database tapi belum ditautkan ke user, kita buatkan otomatis
+            $user = \App\Models\User::create([
+                'name' => $student->nama_siswa,
+                'email' => ($student->nisn ?? $student->nis) . '@smk11maret.sch.id',
+                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+                'role' => 'STUDENT',
+                'id_siswa' => $student->id_siswa,
+            ]);
         }
 
         if (\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
