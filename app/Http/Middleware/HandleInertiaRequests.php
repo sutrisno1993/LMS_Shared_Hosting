@@ -53,6 +53,10 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'app' => [
+                'branch' => [
+                    'code' => (strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'BKS' : 'JKT',
+                    'name' => (strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'Bekasi' : 'Jakarta',
+                ],
                 'is_local_env' => app()->environment(['local', 'development']),
                 'current_time' => now()->format('Y-m-d H:i:s'),
                 'is_mock_time' => \Illuminate\Support\Facades\Cache::has('time_offset'),
