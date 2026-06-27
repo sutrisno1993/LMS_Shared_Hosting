@@ -21,7 +21,7 @@
           🎓
         </div>
         <div>
-          <div class="text-sm font-bold text-white">LMS 11 Maret</div>
+          <div class="text-sm font-bold text-white">{{ $page.props.app.branch.name || 'LMS 11 Maret' }}</div>
           <div class="text-xs text-slate-500">{{ roleLabel }}</div>
         </div>
       </div>

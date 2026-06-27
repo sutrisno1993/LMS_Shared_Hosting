@@ -35,6 +35,13 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        try {
+            $setting = \Illuminate\Support\Facades\DB::table('app_settings')->first();
+            $branchName = $setting ? $setting->branch_name : ((strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'LMS 11 Maret Bekasi' : 'LMS 11 Maret Jakarta');
+        } catch (\Exception $e) {
+            $branchName = (strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'LMS 11 Maret Bekasi' : 'LMS 11 Maret Jakarta';
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -55,7 +62,7 @@ class HandleInertiaRequests extends Middleware
             'app' => [
                 'branch' => [
                     'code' => (strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'BKS' : 'JKT',
-                    'name' => (strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'Bekasi' : 'Jakarta',
+                    'name' => $branchName,
                 ],
                 'is_local_env' => app()->environment(['local', 'development']),
                 'current_time' => now()->format('Y-m-d H:i:s'),
