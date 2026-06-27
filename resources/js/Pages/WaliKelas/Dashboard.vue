@@ -219,6 +219,7 @@ const navigation = [
       { href: '/walikelas/jurnal', icon: '📓', label: 'Jurnal KBM Kelas' },
       { href: '/walikelas/pembinaan', icon: '⚡', label: 'Pembinaan & SP Siswa' },
       { href: '/walikelas/p5-assessment', icon: '🌱', label: 'Asesmen P5' },
+      { href: '/walikelas/reset-requests', icon: '🔑', label: 'Reset Password' },
     ],
   },
 ];

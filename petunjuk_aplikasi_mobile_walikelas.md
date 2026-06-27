@@ -130,7 +130,7 @@ Wali Kelas memiliki tab dashboard terpisah di menu navigasi bawah atau laci menu
     ```json
     {
       "success": true,
-      "pdf_url": "https://lms.smk11maret.sch.id/storage/sp/sp1_siswa_3.pdf"
+      "pdf_url": "https://lms11maret.xyz/storage/sp/sp1_siswa_3.pdf"
     }
     ```
 

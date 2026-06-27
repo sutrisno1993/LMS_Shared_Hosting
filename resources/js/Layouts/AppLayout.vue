@@ -240,6 +240,7 @@ const resolvedNavigation = computed(() => {
           { href: '/admin/siswa', icon: '👥', label: 'Data Siswa' },
           { href: '/admin/events', icon: '🗓️', label: 'Event & Libur' },
           { href: '/admin/kuesioner', icon: '⭐', label: 'Kuesioner Kinerja' },
+          { href: '/admin/reset-requests', icon: '🔑', label: 'Reset Password Guru' },
         ],
       },
       {
@@ -300,6 +301,7 @@ const resolvedNavigation = computed(() => {
           { href: '/walikelas/jurnal', icon: '📓', label: 'Jurnal KBM Kelas' },
           { href: '/walikelas/pembinaan', icon: '⚡', label: 'Pembinaan & SP Siswa' },
           { href: '/walikelas/p5-assessment', icon: '🌱', label: 'Asesmen P5' },
+          { href: '/walikelas/reset-requests', icon: '🔑', label: 'Reset Password' },
         ],
       },
     ];

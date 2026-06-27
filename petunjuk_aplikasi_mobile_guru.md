@@ -220,7 +220,7 @@ Fitur untuk memantau, mencatat, dan menangani kasus siswa kelas perwalian yang b
           "jenis_tindakan": "Home Visit",
           "tanggal": "2026-06-25",
           "keterangan": "Melakukan kunjungan rumah untuk klarifikasi dan koordinasi dengan orang tua.",
-          "foto_bukti": "https://lms11maret.sch.id/storage/bukti-pembinaan/visit_hendri_20260625.jpg",
+          "foto_bukti": "https://lms11maret.xyz/storage/bukti-pembinaan/visit_hendri_20260625.jpg",
           "status_dokumen": "Dokumen Terverifikasi"
         }
       ]

@@ -69,6 +69,9 @@ Route::middleware('guest')->group(function () {
     Route::post('/login/admin', [AuthController::class, 'loginAdmin']);
     Route::post('/login/guru', [AuthController::class, 'loginTeacher']);
     Route::post('/login/siswa', [AuthController::class, 'loginStudent']);
+
+    // Guest: Request Lupa Password
+    Route::post('/password/reset-request', [\App\Http\Controllers\PasswordResetController::class, 'requestReset'])->name('password.reset-request');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -123,6 +126,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/piket', [\App\Http\Controllers\AdminController::class, 'piketIndex'])->name('piket.index');
     Route::post('/piket', [\App\Http\Controllers\AdminController::class, 'updatePiket'])->name('piket.update');
     Route::get('/kehadiran-guru', [\App\Http\Controllers\AdminController::class, 'kehadiranGuruIndex'])->name('kehadiran-guru.index');
+
+    // Persetujuan Reset Password Guru
+    Route::get('/reset-requests', [\App\Http\Controllers\PasswordResetController::class, 'listTeacherRequests'])->name('reset-requests.index');
+    Route::post('/reset-requests/{id}/approve', [\App\Http\Controllers\PasswordResetController::class, 'approveTeacherRequest'])->name('reset-requests.approve');
+    Route::post('/reset-requests/{id}/reject', [\App\Http\Controllers\PasswordResetController::class, 'rejectTeacherRequest'])->name('reset-requests.reject');
 });
 
 // Guru routes
@@ -209,4 +217,9 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('walikelas')->name('walikela
     Route::get('/pembinaan', [WaliKelasController::class, 'pembinaanIndex'])->name('pembinaan.index');
     Route::post('/pembinaan', [WaliKelasController::class, 'simpanPembinaan'])->name('pembinaan.store');
     Route::delete('/pembinaan/{id}', [WaliKelasController::class, 'hapusPembinaan'])->name('pembinaan.delete');
+
+    // Persetujuan Reset Password Murid
+    Route::get('/reset-requests', [\App\Http\Controllers\PasswordResetController::class, 'listStudentRequests'])->name('reset-requests.index');
+    Route::post('/reset-requests/{id}/approve', [\App\Http\Controllers\PasswordResetController::class, 'approveStudentRequest'])->name('reset-requests.approve');
+    Route::post('/reset-requests/{id}/reject', [\App\Http\Controllers\PasswordResetController::class, 'rejectStudentRequest'])->name('reset-requests.reject');
 });
