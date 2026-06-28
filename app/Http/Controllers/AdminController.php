@@ -271,7 +271,42 @@ class AdminController extends Controller
     }
 
     /**
-     * Import Data Siswa dari CSV
+     * Export Data Siswa ke CSV
+     */
+    public function exportSiswa()
+    {
+        $headers = [
+            'Content-type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=data_siswa_lms.csv',
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0'
+        ];
+
+        $columns = ['ID Internal (JANGAN DIUBAH)', 'NIS', 'NISN', 'Nama Siswa', 'Nama Kelas'];
+
+        $callback = function() use ($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            
+            $students = \App\Models\Student::with('clas')->orderBy('id_kelas')->orderBy('nama_siswa')->get();
+            foreach ($students as $siswa) {
+                fputcsv($file, [
+                    $siswa->id_siswa,
+                    $siswa->nis,
+                    $siswa->nisn,
+                    $siswa->nama_siswa,
+                    $siswa->clas ? $siswa->clas->nama_kelas : ''
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Preview Import Data Siswa dari CSV
      */
     public function importSiswa(Request $request)
     {
@@ -285,46 +320,130 @@ class AdminController extends Controller
         // Skip header
         fgetcsv($handle);
         
+        $previewData = [];
+        $existingNisn = \App\Models\Student::pluck('id_siswa', 'nisn')->toArray();
+        $existingNis = \App\Models\Student::pluck('id_siswa', 'nis')->toArray();
+
+        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            $id_internal = trim($data[0] ?? '');
+            $nis = trim($data[1] ?? '');
+            $nisn = trim($data[2] ?? '');
+            $nama = trim($data[3] ?? '');
+            $nama_kelas = trim($data[4] ?? '');
+
+            if (empty($nis) && empty($nama) && empty($nama_kelas)) {
+                continue; // Skip empty rows
+            }
+
+            $status = 'VALID';
+            $errorMsg = [];
+
+            if (empty($nama_kelas)) {
+                $status = 'ERROR';
+                $errorMsg[] = 'Kelas kosong';
+            } else {
+                $kelas = \App\Models\Clas::where('nama_kelas', $nama_kelas)->first();
+                if (!$kelas) {
+                    $status = 'ERROR';
+                    $errorMsg[] = "Kelas '$nama_kelas' tidak valid";
+                }
+            }
+
+            if (empty($id_internal)) {
+                // Anak Baru (Insert)
+                if (empty($nisn)) {
+                    $status = 'ERROR';
+                    $errorMsg[] = 'NISN kosong untuk anak baru';
+                } else if (isset($existingNisn[$nisn])) {
+                    $status = 'ERROR';
+                    $errorMsg[] = 'NISN sudah ada di database (duplikat)';
+                }
+                
+                if (empty($nis)) {
+                    $status = 'ERROR';
+                    $errorMsg[] = 'NIS kosong untuk anak baru';
+                } else if (isset($existingNis[$nis])) {
+                    $status = 'ERROR';
+                    $errorMsg[] = 'NIS sudah ada di database (duplikat)';
+                }
+            } else {
+                // Anak Lama (Update), ID prioritas
+                if (!\App\Models\Student::find($id_internal)) {
+                    $status = 'ERROR';
+                    $errorMsg[] = 'ID Internal tidak ditemukan di sistem';
+                }
+            }
+
+            $previewData[] = [
+                'id_internal' => $id_internal,
+                'nis' => $nis,
+                'nisn' => $nisn,
+                'nama' => $nama,
+                'kelas' => $nama_kelas,
+                'status' => $status,
+                'error_msg' => implode(', ', $errorMsg)
+            ];
+        }
+        fclose($handle);
+
+        return response()->json([
+            'success' => true,
+            'preview_data' => $previewData
+        ]);
+    }
+
+    /**
+     * Konfirmasi dan Simpan Import Data Siswa
+     */
+    public function importConfirmSiswa(Request $request)
+    {
+        $request->validate([
+            'students' => 'required|array'
+        ]);
+
         $successCount = 0;
         $errorCount = 0;
 
         DB::beginTransaction();
         try {
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                // Asumsi format CSV: NIS, NISN, Nama Siswa, Nama Kelas
-                $nis = trim($data[0] ?? '');
-                $nisn = trim($data[1] ?? '');
-                $nama = trim($data[2] ?? '');
-                $nama_kelas = trim($data[3] ?? '');
+            foreach ($request->students as $row) {
+                if ($row['status'] === 'ERROR') {
+                    $errorCount++;
+                    continue; // Skip the ones still erroring
+                }
 
-                if (empty($nis) || empty($nama) || empty($nama_kelas)) {
+                $kelas = \App\Models\Clas::where('nama_kelas', $row['kelas'])->first();
+                if (!$kelas) {
                     $errorCount++;
                     continue;
                 }
 
-                $kelas = \App\Models\Clas::where('nama_kelas', $nama_kelas)->first();
-                if (!$kelas) {
-                    throw new \Exception("Kelas '{$nama_kelas}' tidak terdaftar di sistem! Harap periksa kembali penulisan di file Excel.");
-                }
-
-                \App\Models\Student::updateOrCreate(
-                    ['nis' => $nis],
-                    [
-                        'nisn' => $nisn,
-                        'nama_siswa' => $nama,
+                if (!empty($row['id_internal'])) {
+                    // Update Siswa Lama
+                    \App\Models\Student::where('id_siswa', $row['id_internal'])->update([
+                        'nis' => $row['nis'],
+                        'nisn' => $row['nisn'],
+                        'nama_siswa' => $row['nama'],
                         'id_kelas' => $kelas->id_kelas
-                    ]
-                );
-                $successCount++;
+                    ]);
+                    $successCount++;
+                } else {
+                    // Insert Siswa Baru
+                    \App\Models\Student::create([
+                        'nis' => $row['nis'],
+                        'nisn' => $row['nisn'],
+                        'nama_siswa' => $row['nama'],
+                        'id_kelas' => $kelas->id_kelas
+                    ]);
+                    $successCount++;
+                }
             }
-            fclose($handle);
+            
             DB::commit();
-
-            return redirect()->back()->with('success', "$successCount siswa berhasil diimport, $errorCount baris dilewati.");
+            return redirect()->back()->with('success', "$successCount siswa berhasil disimpan, $errorCount gagal/dilewati.");
         } catch (\Exception $e) {
             DB::rollBack();
-            fclose($handle);
-            return redirect()->back()->with('error', 'Gagal import file: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
     }
 

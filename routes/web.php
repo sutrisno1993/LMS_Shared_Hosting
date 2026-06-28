@@ -87,7 +87,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     
     // Manajemen Siswa
     Route::get('/siswa', [AdminController::class, 'siswaIndex'])->name('siswa');
+    Route::get('/siswa/export', [AdminController::class, 'exportSiswa'])->name('siswa.export');
     Route::post('/siswa/import', [AdminController::class, 'importSiswa'])->name('siswa.import');
+    Route::post('/siswa/import-confirm', [AdminController::class, 'importConfirmSiswa'])->name('siswa.import-confirm');
     
     // Timeline / Kalender Akademik
     Route::get('/timeline', [AdminController::class, 'timeline'])->name('timeline');
