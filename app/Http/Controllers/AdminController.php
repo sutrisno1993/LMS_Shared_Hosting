@@ -344,8 +344,7 @@ class AdminController extends Controller
             } else {
                 $kelas = \App\Models\Clas::where('nama_kelas', $nama_kelas)->first();
                 if (!$kelas) {
-                    $status = 'ERROR';
-                    $errorMsg[] = "Kelas '$nama_kelas' tidak valid";
+                    // Kelas baru, tidak perlu error, akan otomatis dibuat saat confirm
                 }
             }
 
@@ -412,11 +411,23 @@ class AdminController extends Controller
                     continue; // Skip the ones still erroring
                 }
 
-                $kelas = \App\Models\Clas::where('nama_kelas', $row['kelas'])->first();
-                if (!$kelas) {
-                    $errorCount++;
-                    continue;
-                }
+                // Parse Tingkat & Jurusan untuk kelas baru
+                $nama_kelas_upper = strtoupper(trim($row['kelas']));
+                $tingkat = 10;
+                if (str_starts_with($nama_kelas_upper, 'XII')) $tingkat = 12;
+                else if (str_starts_with($nama_kelas_upper, 'XI')) $tingkat = 11;
+                
+                $parts = explode(' ', $nama_kelas_upper);
+                $jurusan = count($parts) > 1 ? $parts[1] : 'UMUM';
+
+                $kelas = \App\Models\Clas::firstOrCreate(
+                    ['nama_kelas' => $row['kelas']],
+                    [
+                        'tingkat' => $tingkat,
+                        'jurusan' => $jurusan,
+                        'shift_operasional' => 'PAGI'
+                    ]
+                );
 
                 if (!empty($row['id_internal'])) {
                     // Update Siswa Lama
