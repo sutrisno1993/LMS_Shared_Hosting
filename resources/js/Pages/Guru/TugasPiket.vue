@@ -12,7 +12,24 @@
       </button>
     </template>
 
-    <div class="bg-[#18181B] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+    <!-- TABS -->
+    <div class="flex gap-4 mb-6 border-b border-white/10 pb-2">
+      <button 
+        @click="activeTab = 'GURU'" 
+        class="px-4 py-2 font-bold transition-colors"
+        :class="activeTab === 'GURU' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-white'">
+        1. Kehadiran Guru
+      </button>
+      <button 
+        @click="activeTab = 'SISWA'" 
+        class="px-4 py-2 font-bold transition-colors"
+        :class="activeTab === 'SISWA' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-white'">
+        2. Keterlambatan Siswa
+      </button>
+    </div>
+
+    <!-- TAB 1: KEHADIRAN GURU -->
+    <div v-show="activeTab === 'GURU'" class="bg-[#18181B] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-fade-in">
       <div class="p-5 border-b border-white/10 flex items-center justify-between">
         <div>
           <h3 class="text-lg font-black text-white">Daftar Guru Terjadwal Shift {{ shift }}</h3>
@@ -97,21 +114,165 @@
         </table>
       </div>
     </div>
+
+    <!-- TAB 2: SISWA TERLAMBAT -->
+    <div v-show="activeTab === 'SISWA'" class="animate-fade-in space-y-6">
+      <!-- Form Input -->
+      <div class="bg-[#18181B] border border-white/10 rounded-2xl p-6 shadow-2xl">
+        <h3 class="text-lg font-black text-white mb-4">Catat Siswa Terlambat</h3>
+        <form @submit.prevent="submitSiswaTelat" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div class="col-span-1 md:col-span-1 relative">
+            <label class="block text-xs font-bold text-slate-400 mb-1">Cari Siswa</label>
+            <input 
+              v-model="searchQuery" 
+              @focus="showDropdown = true"
+              placeholder="Ketik Nama / NIS..."
+              class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm"
+            />
+            <!-- Dropdown -->
+            <div v-if="showDropdown && filteredStudents.length > 0" class="absolute z-50 mt-1 w-[300px] max-h-60 overflow-y-auto bg-[#1a1b2e] border border-white/10 rounded-lg shadow-xl">
+              <div 
+                v-for="s in filteredStudents" 
+                :key="s.id" 
+                @click="selectStudent(s)"
+                class="px-3 py-2 hover:bg-indigo-500/20 cursor-pointer border-b border-white/5 transition-colors"
+              >
+                <div class="text-sm font-bold text-white">{{ s.nama }}</div>
+                <div class="text-xs text-indigo-300">{{ s.nis }} - {{ s.kelas }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-span-1 md:col-span-1">
+            <label class="block text-xs font-bold text-slate-400 mb-1">Terpilih</label>
+            <div class="w-full bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-3 py-2 text-indigo-200 text-sm h-[38px] flex items-center overflow-hidden whitespace-nowrap">
+              {{ formTelat.nama_siswa || 'Belum memilih...' }}
+            </div>
+          </div>
+
+          <div class="col-span-1 md:col-span-1">
+            <label class="block text-xs font-bold text-slate-400 mb-1">Alasan / Keterangan</label>
+            <input 
+              v-model="formTelat.alasan" 
+              placeholder="Contoh: Bangun kesiangan"
+              class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm"
+            />
+          </div>
+
+          <div class="col-span-1 md:col-span-1 flex gap-2">
+            <div class="flex-1">
+              <label class="block text-xs font-bold text-slate-400 mb-1">Tindakan</label>
+              <input 
+                v-model="formTelat.tindakan" 
+                required
+                placeholder="Contoh: Pungut sampah"
+                class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm"
+              />
+            </div>
+            <button 
+              type="submit" 
+              :disabled="!formTelat.id_siswa || formTelat.processing"
+              class="h-[38px] px-4 mt-5 rounded-lg font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 transition-colors shadow-lg"
+            >
+              Catat!
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tabel Riwayat Hari Ini -->
+      <div class="bg-[#18181B] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+        <div class="p-5 border-b border-white/10">
+          <h3 class="text-lg font-black text-white">Riwayat Terlambat Hari Ini</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-white/5 border-b border-white/10 text-slate-400 uppercase tracking-wider text-xs">
+                <th class="px-6 py-3 font-semibold">Waktu</th>
+                <th class="px-6 py-3 font-semibold">Nama Siswa</th>
+                <th class="px-6 py-3 font-semibold">Kelas</th>
+                <th class="px-6 py-3 font-semibold">Alasan</th>
+                <th class="px-6 py-3 font-semibold">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/10">
+              <tr v-for="late in lateStudentsToday" :key="late.id" class="hover:bg-white/5 transition-colors">
+                <td class="px-6 py-3 text-indigo-400 font-mono">{{ late.waktu }}</td>
+                <td class="px-6 py-3 text-white font-bold">{{ late.nama }}</td>
+                <td class="px-6 py-3 text-slate-300">{{ late.kelas }}</td>
+                <td class="px-6 py-3 text-slate-300">{{ late.keterangan || '-' }}</td>
+                <td class="px-6 py-3 text-rose-400">{{ late.tipe_tindakan }}</td>
+              </tr>
+              <tr v-if="lateStudentsToday.length === 0">
+                <td colspan="5" class="px-6 py-8 text-center text-slate-400">Belum ada siswa yang dicatat terlambat hari ini. Bagus!</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Head, router, usePage, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
   shift: String,
   hariIni: String,
   teachers: Array,
+  students: {
+    type: Array,
+    default: () => []
+  },
+  lateStudentsToday: {
+    type: Array,
+    default: () => []
+  },
 });
 
 const page = usePage();
+const activeTab = ref('GURU'); // 'GURU' atau 'SISWA'
+
+// Fitur Pencarian Siswa
+const searchQuery = ref('');
+const showDropdown = ref(false);
+
+const filteredStudents = computed(() => {
+  if (!searchQuery.value) return [];
+  const query = searchQuery.value.toLowerCase();
+  return props.students.filter(s => 
+    s.nama.toLowerCase().includes(query) || 
+    s.nis.toLowerCase().includes(query)
+  ).slice(0, 5); // Batasi 5 hasil agar tidak berat
+});
+
+const formTelat = useForm({
+  id_siswa: null,
+  nama_siswa: '',
+  alasan: '',
+  tindakan: '',
+});
+
+const selectStudent = (student) => {
+  formTelat.id_siswa = student.id;
+  formTelat.nama_siswa = student.nama + ' (' + student.kelas + ')';
+  searchQuery.value = '';
+  showDropdown.value = false;
+};
+
+const submitSiswaTelat = () => {
+  formTelat.post('/guru/tugas-piket/siswa-telat', {
+    preserveScroll: true,
+    onSuccess: () => {
+      formTelat.reset();
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Siswa terlambat berhasil dicatat!', type: 'success' } }));
+    }
+  });
+};
 
 const toggleHadir = (guru) => {
   if (guru.status === 'HADIR') {

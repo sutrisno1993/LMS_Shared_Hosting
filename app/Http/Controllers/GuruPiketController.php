@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Teacher;
 use App\Models\TeacherAttendance;
 use App\Models\KbmSession;
+use App\Models\Student;
+use App\Models\StudentDiscipline;
 
 class GuruPiketController extends Controller
 {
@@ -81,10 +83,38 @@ class GuruPiketController extends Controller
             ];
         })->sortBy('jam_ke')->values();
 
+        // Data untuk Tab Siswa Terlambat
+        $allStudents = Student::with('clas')->orderBy('nama_siswa')->get()->map(function($s) {
+            return [
+                'id' => $s->id_siswa,
+                'nama' => $s->nama_siswa,
+                'nis' => $s->nis,
+                'kelas' => $s->clas->nama_kelas ?? 'Unknown',
+            ];
+        });
+
+        $lateStudentsToday = StudentDiscipline::with('student.clas')
+            ->where('tanggal_tindakan', $todayStr)
+            ->where('kategori_kasus', 'ABSENSI')
+            ->orderBy('created_at', 'desc')
+            ->get()->map(function($d) {
+                return [
+                    'id' => $d->id,
+                    'nama' => $d->student->nama_siswa ?? 'Unknown',
+                    'kelas' => $d->student->clas->nama_kelas ?? 'Unknown',
+                    'kasus_detail' => $d->kasus_detail,
+                    'keterangan' => $d->keterangan,
+                    'tipe_tindakan' => $d->tipe_tindakan,
+                    'waktu' => $d->created_at->format('H:i'),
+                ];
+            });
+
         return Inertia::render('Guru/TugasPiket', [
             'shift' => $shiftPiket,
             'hariIni' => $todayStr,
             'teachers' => $teachersList,
+            'students' => $allStudents,
+            'lateStudentsToday' => $lateStudentsToday,
         ]);
     }
 
@@ -125,5 +155,30 @@ class GuruPiketController extends Controller
         );
 
         return redirect()->back()->with('success', 'Absensi guru berhasil disimpan.');
+    }
+
+    /**
+     * Simpan Data Siswa Terlambat (Oleh Piket)
+     */
+    public function catatSiswaTelat(Request $request)
+    {
+        $request->validate([
+            'id_siswa' => 'required|exists:students,id_siswa',
+            'alasan' => 'nullable|string',
+            'tindakan' => 'required|string',
+        ]);
+
+        $todayStr = now()->toDateString();
+
+        StudentDiscipline::create([
+            'id_siswa' => $request->id_siswa,
+            'kategori_kasus' => 'ABSENSI',
+            'kasus_detail' => 'TERLAMBAT DATANG',
+            'tipe_tindakan' => $request->tindakan,
+            'tanggal_tindakan' => $todayStr,
+            'keterangan' => $request->alasan,
+        ]);
+
+        return redirect()->back()->with('success', 'Data keterlambatan siswa berhasil dicatat.');
     }
 }
