@@ -16,6 +16,7 @@ Dokumen ini berisi panduan teknis, arsitektur, spesifikasi UI/UX, dan penyajian 
 * **Metode**: Token-based Authentication menggunakan JWT (JSON Web Token).
 * **Sesi**: Simpan token secara aman di secure storage (Keychain untuk iOS, Shared Preferences dengan enkripsi untuk Android).
 * **Biometrik**: Integrasikan sidik jari (Fingerprint) atau wajah (Face ID) untuk kemudahan login setelah login pertama berhasil.
+* **Single Login Gateway**: Guru biasa dan Wali Kelas masuk melalui satu pintu login (*endpoint*) yang sama tanpa perlu memilih peran. Sistem (melalui API/Middleware) akan secara otomatis mendeteksi apakah guru tersebut memegang kelas (misalnya lewat penanda `is_walikelas = true` di respons JWT/profil), dan aplikasi mobile bertugas merender navigasi secara dinamis berdasarkan status tersebut.
 * **Auto-refresh**: Implementasikan *Refresh Token* sebelum token akses kedaluwarsa demi menjaga kenyamanan pengguna.
 
 ---
