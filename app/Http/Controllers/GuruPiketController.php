@@ -10,6 +10,7 @@ use App\Models\TeacherAttendance;
 use App\Models\KbmSession;
 use App\Models\Student;
 use App\Models\StudentDiscipline;
+use App\Models\Clas;
 
 class GuruPiketController extends Controller
 {
@@ -109,12 +110,21 @@ class GuruPiketController extends Controller
                 ];
             });
 
+        // Data Kelas untuk Tab Keliling Kelas
+        $classes = Clas::orderBy('tingkat')->orderBy('nama_kelas')->get()->map(function($c) {
+            return [
+                'id' => $c->id_kelas,
+                'nama_kelas' => $c->nama_kelas
+            ];
+        });
+
         return Inertia::render('Guru/TugasPiket', [
             'shift' => $shiftPiket,
             'hariIni' => $todayStr,
             'teachers' => $teachersList,
             'students' => $allStudents,
             'lateStudentsToday' => $lateStudentsToday,
+            'classes' => $classes,
         ]);
     }
 
@@ -180,5 +190,36 @@ class GuruPiketController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Data keterlambatan siswa berhasil dicatat.');
+    }
+
+    /**
+     * Catat Absensi Kelas (Rekap Harian Piket Keliling)
+     */
+    public function catatAbsensiKelas(Request $request)
+    {
+        $request->validate([
+            'id_kelas' => 'required|exists:classes,id_kelas',
+            'absensi' => 'required|array', // ex: [{id_siswa: 1, status: 'SAKIT', keterangan: 'Demam'}]
+        ]);
+
+        $todayStr = now()->toDateString();
+        $kelas = Clas::find($request->id_kelas);
+
+        foreach ($request->absensi as $absen) {
+            if (in_array($absen['status'], ['SAKIT', 'IZIN', 'ALPA'])) {
+                $detail = "TIDAK HADIR ({$absen['status']}) - Rekap Harian Piket";
+                
+                StudentDiscipline::create([
+                    'id_siswa' => $absen['id_siswa'],
+                    'kategori_kasus' => 'ABSENSI',
+                    'kasus_detail' => $detail,
+                    'tipe_tindakan' => 'Dicatat Piket',
+                    'tanggal_tindakan' => $todayStr,
+                    'keterangan' => $absen['keterangan'] ?? null,
+                ]);
+            }
+        }
+
+        return redirect()->back()->with('success', "Absensi harian kelas {$kelas->nama_kelas} berhasil direkap.");
     }
 }

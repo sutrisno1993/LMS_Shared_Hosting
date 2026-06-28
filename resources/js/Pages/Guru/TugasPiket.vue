@@ -26,6 +26,12 @@
         :class="activeTab === 'SISWA' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-white'">
         2. Keterlambatan Siswa
       </button>
+      <button 
+        @click="activeTab = 'KELAS'" 
+        class="px-4 py-2 font-bold transition-colors"
+        :class="activeTab === 'KELAS' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-slate-400 hover:text-white'">
+        3. Keliling Kelas
+      </button>
     </div>
 
     <!-- TAB 1: KEHADIRAN GURU -->
@@ -212,6 +218,87 @@
         </div>
       </div>
     </div>
+
+    <!-- TAB 3: KELILING KELAS (REKAP ABSENSI HARIAN) -->
+    <div v-show="activeTab === 'KELAS'" class="animate-fade-in space-y-6">
+      <div class="bg-[#18181B] border border-white/10 rounded-2xl p-6 shadow-2xl">
+        <div class="flex items-center justify-between mb-6 border-b border-white/10 pb-4">
+          <div>
+            <h3 class="text-lg font-black text-white">Buku Piket: Keliling Kelas</h3>
+            <p class="text-xs text-slate-400">Pilih kelas, dan tandai siswa yang TIDAK HADIR hari ini.</p>
+          </div>
+          <div class="w-64">
+            <label class="block text-xs font-bold text-slate-400 mb-1">Pilih Kelas</label>
+            <select 
+              v-model="selectedClassId" 
+              @change="loadClassStudents"
+              class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm">
+              <option :value="null">-- Pilih Kelas --</option>
+              <option v-for="c in classes" :key="c.id" :value="c.id">{{ c.nama_kelas }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div v-if="selectedClassId && classStudents.length > 0">
+          <div class="flex justify-between items-center mb-3">
+            <div class="text-sm text-indigo-300 font-bold">
+              Total Siswa: {{ classStudents.length }}
+            </div>
+            <button 
+              @click="submitAbsensiKelas"
+              :disabled="isSubmittingAbsen"
+              class="px-4 py-2 rounded-lg font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 transition-colors shadow-lg"
+            >
+              {{ isSubmittingAbsen ? 'Menyimpan...' : 'Simpan Rekap Kelas Ini' }}
+            </button>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr class="bg-white/5 border-b border-white/10 text-slate-400 uppercase tracking-wider text-xs">
+                  <th class="px-4 py-3 font-semibold w-10">No</th>
+                  <th class="px-4 py-3 font-semibold">Nama Siswa</th>
+                  <th class="px-4 py-3 font-semibold w-40">Status Harian</th>
+                  <th class="px-4 py-3 font-semibold">Keterangan Tambahan</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/10">
+                <tr v-for="(s, index) in classStudents" :key="s.id_siswa" class="hover:bg-white/5 transition-colors">
+                  <td class="px-4 py-3 text-slate-400 font-mono">{{ index + 1 }}</td>
+                  <td class="px-4 py-3 text-white font-bold">{{ s.nama_siswa }}</td>
+                  <td class="px-4 py-3">
+                    <select 
+                      v-model="s.status"
+                      class="bg-black/20 border border-white/10 text-white rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-500 w-full"
+                      :class="{'text-emerald-400': s.status === 'HADIR', 'text-yellow-400': s.status === 'SAKIT', 'text-blue-400': s.status === 'IZIN', 'text-red-400': s.status === 'ALPA'}"
+                    >
+                      <option value="HADIR" class="text-emerald-400">✅ HADIR</option>
+                      <option value="SAKIT" class="text-yellow-400">Sakit</option>
+                      <option value="IZIN" class="text-blue-400">Izin</option>
+                      <option value="ALPA" class="text-red-400">Alfa</option>
+                    </select>
+                  </td>
+                  <td class="px-4 py-3">
+                    <input 
+                      v-if="s.status !== 'HADIR'"
+                      v-model="s.keterangan" 
+                      placeholder="Surat dokter / Izin ortu..."
+                      class="w-full bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-white focus:border-indigo-500 outline-none text-xs"
+                    />
+                    <span v-else class="text-xs text-slate-500 italic">-</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div v-else-if="selectedClassId" class="py-10 text-center text-slate-400">
+          Tidak ada data siswa di kelas ini.
+        </div>
+      </div>
+    </div>
   </AppLayout>
 </template>
 
@@ -232,10 +319,14 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  classes: {
+    type: Array,
+    default: () => []
+  }
 });
 
 const page = usePage();
-const activeTab = ref('GURU'); // 'GURU' atau 'SISWA'
+const activeTab = ref('GURU'); // 'GURU', 'SISWA', 'KELAS'
 
 // Fitur Pencarian Siswa
 const searchQuery = ref('');
@@ -270,6 +361,59 @@ const submitSiswaTelat = () => {
     onSuccess: () => {
       formTelat.reset();
       window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Siswa terlambat berhasil dicatat!', type: 'success' } }));
+    }
+  });
+};
+
+// Fitur Keliling Kelas
+const selectedClassId = ref(null);
+const classStudents = ref([]);
+const isSubmittingAbsen = ref(false);
+
+const loadClassStudents = () => {
+  if (!selectedClassId.value) {
+    classStudents.value = [];
+    return;
+  }
+  
+  const className = props.classes.find(c => c.id === selectedClassId.value)?.nama_kelas;
+  
+  // Ambil siswa yang kelasnya sama, siapkan reaktif object
+  classStudents.value = props.students
+    .filter(s => s.kelas === className)
+    .map(s => ({
+      id_siswa: s.id,
+      nama_siswa: s.nama,
+      status: 'HADIR', // Default
+      keterangan: ''
+    }));
+};
+
+const submitAbsensiKelas = () => {
+  if (classStudents.value.length === 0) return;
+  isSubmittingAbsen.value = true;
+  
+  // Hanya kirim yang absen
+  const absenData = classStudents.value
+    .filter(s => s.status !== 'HADIR')
+    .map(s => ({
+      id_siswa: s.id_siswa,
+      status: s.status,
+      keterangan: s.keterangan
+    }));
+
+  router.post('/guru/tugas-piket/absensi-kelas', {
+    id_kelas: selectedClassId.value,
+    absensi: absenData
+  }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      isSubmittingAbsen.value = false;
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Absensi harian kelas berhasil direkap!', type: 'success' } }));
+    },
+    onError: () => {
+      isSubmittingAbsen.value = false;
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Gagal merekap absensi!', type: 'error' } }));
     }
   });
 };

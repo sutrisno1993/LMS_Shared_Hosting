@@ -145,6 +145,7 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('guru')->name('guru.')->grou
     Route::get('/tugas-piket', [\App\Http\Controllers\GuruPiketController::class, 'index'])->name('tugas-piket');
     Route::post('/tugas-piket/absensi', [\App\Http\Controllers\GuruPiketController::class, 'simpanAbsensiGuru'])->name('tugas-piket.absensi');
     Route::post('/tugas-piket/siswa-telat', [\App\Http\Controllers\GuruPiketController::class, 'catatSiswaTelat'])->name('tugas-piket.siswa-telat');
+    Route::post('/tugas-piket/absensi-kelas', [\App\Http\Controllers\GuruPiketController::class, 'catatAbsensiKelas'])->name('tugas-piket.absensi-kelas');
     
     Route::get('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'pemetaanMateri'])->name('pemetaan-materi');
     Route::post('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'simpanPemetaanMateri']);
