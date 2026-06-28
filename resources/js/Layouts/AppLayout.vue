@@ -82,7 +82,7 @@
     </nav>
 
     <!-- User footer -->
-    <div class="p-3 border-t border-white/8 relative group">
+    <div class="p-3 border-t border-white/8 relative group" @click="showLogout = !showLogout">
       <div 
         :class="[
           'flex items-center rounded-xl hover:bg-white/5 cursor-pointer transition-colors',
@@ -96,12 +96,17 @@
           <div class="text-sm font-semibold text-white truncate">{{ $page.props.auth?.user?.name || 'Guest User' }}</div>
           <div class="text-xs text-slate-500">{{ roleLabel }}</div>
         </div>
-        <button v-if="showDetails" class="ml-auto text-slate-600 group-hover:text-slate-400 text-lg transition-colors">⋯</button>
+        <button v-if="showDetails" class="ml-auto text-slate-600 group-hover:text-slate-400 text-lg transition-colors">
+          <span class="transition-transform duration-200" :class="{'rotate-180': showLogout}">▴</span>
+        </button>
       </div>
       
       <!-- Logout Dropdown -->
-      <div class="absolute bottom-full left-0 pb-2 w-full px-3 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all">
-        <Link href="/logout" method="post" as="button" class="w-full text-center px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl border border-red-500/20 transition-colors">
+      <div :class="[
+        'absolute bottom-full left-0 pb-2 w-full px-3 transition-all duration-200',
+        showLogout ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none translate-y-2 lg:group-hover:opacity-100 lg:group-hover:pointer-events-auto lg:group-hover:translate-y-0'
+      ]">
+        <Link href="/logout" method="post" as="button" class="w-full text-center px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl border border-red-500/20 transition-colors shadow-lg shadow-red-500/5">
           <span v-if="showDetails">🚪 Keluar (Logout)</span>
           <span v-else>🚪</span>
         </Link>
@@ -331,6 +336,7 @@ const resolvedNavigation = computed(() => {
 
 const isMinimized = ref(false);
 const mobileSidebarOpen = ref(false);
+const showLogout = ref(false);
 const showDetails = computed(() => {
   return !isMinimized.value || mobileSidebarOpen.value;
 });
