@@ -94,6 +94,11 @@ const resetScanner = () => {
 };
 
 const onInit = async (promise) => {
+  // Fallback: paksa loading hilang setelah 3 detik
+  const timeout = setTimeout(() => {
+    isLoading.value = false;
+  }, 3000);
+
   try {
     await promise;
     isLoading.value = false;
@@ -105,6 +110,8 @@ const onInit = async (promise) => {
     } else if (error.name === 'NotFoundError') {
       errorMessage.value = 'Tidak ada perangkat kamera ditemukan.';
     }
+  } finally {
+    clearTimeout(timeout);
   }
 };
 
