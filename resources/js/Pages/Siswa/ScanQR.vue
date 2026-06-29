@@ -21,18 +21,23 @@
         <p class="text-sm text-slate-400 text-center mb-6">Pastikan QR Code di layar guru masuk ke dalam kotak pemindai.</p>
 
         <!-- Scanner Box -->
-        <div class="w-full aspect-square rounded-2xl overflow-hidden border-4 border-indigo-500/30 relative bg-black flex items-center justify-center">
+        <div class="w-full aspect-square rounded-2xl overflow-hidden border-4 border-indigo-500/30 relative bg-black">
           
-          <div v-if="isLoading" class="text-indigo-400 animate-pulse text-sm font-bold">
-            Menyiapkan Kamera...
-          </div>
-          
+          <!-- Kamera stream — selalu dirender agar inisialisasi di background -->
           <qrcode-stream 
             v-if="!isProcessing && !successMessage"
             @detect="onDetect" 
             @init="onInit"
             :track="paintOutline"
+            style="position:absolute;inset:0;width:100%;height:100%;"
           ></qrcode-stream>
+
+          <!-- Loading overlay di atas stream -->
+          <div v-if="isLoading && !errorMessage"
+               class="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-10">
+            <span class="w-8 h-8 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3"></span>
+            <span class="text-indigo-400 text-sm font-bold animate-pulse">Menyiapkan Kamera...</span>
+          </div>
 
           <!-- Processing Overlay -->
           <div v-if="isProcessing" class="absolute inset-0 bg-indigo-900/80 backdrop-blur-sm flex flex-col items-center justify-center z-10">
