@@ -89,22 +89,24 @@
                 <td class="px-3 py-1.5">
                   <input 
                     v-if="formData[item.id]"
-                    type="time" 
-                    step="60"
+                    type="text" 
+                    maxlength="5"
+                    placeholder="HH:MM"
                     v-model="formData[item.id].waktu_mulai"
                     @change="markDirty(item.id)"
-                    class="bg-black/20 border border-white/10 rounded-md px-2 py-1 text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-24"
+                    class="bg-black/20 border border-white/10 rounded-md px-2 py-1 text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-20 text-center"
                     :class="{'border-yellow-500/50 text-yellow-300': isDirty(item.id)}"
                   />
                 </td>
                 <td class="px-3 py-1.5">
                   <input 
                     v-if="formData[item.id]"
-                    type="time" 
-                    step="60"
+                    type="text" 
+                    maxlength="5"
+                    placeholder="HH:MM"
                     v-model="formData[item.id].waktu_selesai"
                     @change="markDirty(item.id)"
-                    class="bg-black/20 border border-white/10 rounded-md px-2 py-1 text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-24"
+                    class="bg-black/20 border border-white/10 rounded-md px-2 py-1 text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-20 text-center"
                     :class="{'border-yellow-500/50 text-yellow-300': isDirty(item.id)}"
                   />
                 </td>
@@ -172,18 +174,25 @@ const navigation = [
   }
 ];
 
+// Helper to format time (HH:mm:ss -> HH:mm)
+const formatTime = (timeStr) => {
+  if (!timeStr) return '';
+  return timeStr.substring(0, 5);
+};
+
 // Initialize form data synchronously before mount
 ['PAGI', 'SIANG'].forEach(shift => {
   if (props.schedules && props.schedules[shift]) {
     Object.keys(props.schedules[shift]).forEach(hari => {
       props.schedules[shift][hari].forEach(item => {
-        // Format time slightly to ensure HH:mm:ss for input type="time"
+        const start = formatTime(item.waktu_mulai);
+        const end = formatTime(item.waktu_selesai);
         formData[item.id] = {
           id: item.id,
-          waktu_mulai: item.waktu_mulai,
-          waktu_selesai: item.waktu_selesai,
-          _original_mulai: item.waktu_mulai,
-          _original_selesai: item.waktu_selesai,
+          waktu_mulai: start,
+          waktu_selesai: end,
+          _original_mulai: start,
+          _original_selesai: end,
         };
       });
     });
@@ -203,15 +212,32 @@ const isDirty = (id) => {
 const saveChanges = () => {
   // Collect only changed items to send to server
   const itemsToSave = [];
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  let hasError = false;
+
   dirtyItems.value.forEach(id => {
     if (isDirty(id)) {
+      const start = formData[id].waktu_mulai;
+      const end = formData[id].waktu_selesai;
+
+      if (!timeRegex.test(start) || !timeRegex.test(end)) {
+        hasError = true;
+        return;
+      }
+
       itemsToSave.push({
         id: formData[id].id,
-        waktu_mulai: formData[id].waktu_mulai,
-        waktu_selesai: formData[id].waktu_selesai,
+        waktu_mulai: start.length === 5 ? `${start}:00` : start,
+        waktu_selesai: end.length === 5 ? `${end}:00` : end,
       });
     }
   });
+
+  if (hasError) {
+    errorMessage.value = "Format waktu harus HH:MM (contoh: 13:30) dengan jam valid 00-23 dan menit 00-59.";
+    setTimeout(() => errorMessage.value = '', 5000);
+    return;
+  }
 
   if (itemsToSave.length === 0) {
     successMessage.value = "Tidak ada perubahan yang perlu disimpan.";
@@ -234,8 +260,10 @@ const saveChanges = () => {
       }
       // Reset dirty state
       itemsToSave.forEach(item => {
-        formData[item.id]._original_mulai = item.waktu_mulai;
-        formData[item.id]._original_selesai = item.waktu_selesai;
+        const formattedMulai = formatTime(item.waktu_mulai);
+        const formattedSelesai = formatTime(item.waktu_selesai);
+        formData[item.id]._original_mulai = formattedMulai;
+        formData[item.id]._original_selesai = formattedSelesai;
       });
       dirtyItems.value.clear();
       
