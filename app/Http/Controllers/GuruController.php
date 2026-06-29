@@ -65,8 +65,14 @@ class GuruController extends Controller
                 'jamSelesai' => $jamSelesai,
                 'status_sesi' => $session->status_sesi,
                 'status_guru' => $session->status_guru,
-                'is_active' => $isTimeActive, // is_active HANYA jika waktu sekarang di dalam jam KBM tersebut!
+                'is_active' => $isTimeActive,
                 'shift' => $shift,
+                // Sesi terlewat: masih PENDING tapi sudah > 20 menit sejak bel berbunyi
+                'is_terlewat' => (
+                    $session->status_sesi === 'PENDING' &&
+                    $jp !== null &&
+                    now()->toTimeString() > date('H:i:s', strtotime($jp->waktu_mulai . ' +20 minutes'))
+                ),
                 'payload' => $session->status_sesi === 'SCANNING' ? json_encode([
                     'id_kbm_session' => $session->id,
                 ]) : null,

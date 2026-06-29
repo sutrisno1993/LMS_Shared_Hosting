@@ -52,18 +52,27 @@
         <div v-for="sesi in jadwalList" :key="sesi.id"
              :class="[
                'relative rounded-2xl border p-5 transition-all duration-200',
-               sesi.isActive
-                 ? 'border-indigo-500/50 bg-indigo-500/10 shadow-lg shadow-indigo-500/10'
-                 : sesi.id === closestUpcomingSessionId
-                   ? 'border-amber-500/50 bg-amber-500/5 shadow-lg shadow-amber-500/5'
-                   : sesi.status === 'SELESAI'
-                     ? 'border-white/5 bg-white/2 opacity-60'
-                     : 'border-white/8 hover:border-white/15'
+               sesi.isTerlewat
+                 ? 'border-red-500/60 bg-red-500/5 shadow-lg shadow-red-500/10'
+                 : sesi.isActive
+                   ? 'border-indigo-500/50 bg-indigo-500/10 shadow-lg shadow-indigo-500/10'
+                   : sesi.id === closestUpcomingSessionId
+                     ? 'border-amber-500/50 bg-amber-500/5 shadow-lg shadow-amber-500/5'
+                     : sesi.status === 'SELESAI'
+                       ? 'border-white/5 bg-white/2 opacity-60'
+                       : 'border-white/8 hover:border-white/15'
              ]"
              style="background: var(--card)">
 
+          <!-- Terlewat warning badge -->
+          <div v-if="sesi.isTerlewat"
+               class="absolute top-4 right-4 flex items-center gap-2 text-xs font-bold text-red-400 animate-pulse">
+            <span class="w-2 h-2 rounded-full bg-red-400"></span>
+            SESI TERLEWAT
+          </div>
+
           <!-- Active glow indicator -->
-          <div v-if="sesi.isActive"
+          <div v-else-if="sesi.isActive"
                class="absolute top-4 right-4 flex items-center gap-2 text-xs font-semibold text-indigo-400">
             <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
             SLOT AKTIF SEKARANG
@@ -103,8 +112,14 @@
                 <span>⏱ {{ sesi.durasiJP }} JP ({{ sesi.durasiMenit }} menit)</span>
               </div>
 
+              <!-- Terlewat warning bar -->
+              <div v-if="sesi.isTerlewat" class="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
+                <span class="text-red-400 text-base">⚠️</span>
+                <span class="text-xs font-bold text-red-400">Anda melewatkan sesi ini!! Check-in harus dilakukan maksimal 20 menit setelah bel.</span>
+              </div>
+
               <!-- Student counter (if active) -->
-              <div v-if="sesi.status === 'AKTIF' || sesi.status === 'PENDING_AKTIF'"
+              <div v-else-if="sesi.status === 'AKTIF' || sesi.status === 'PENDING_AKTIF'"
                    class="mt-3 flex items-center gap-3">
                 <div class="text-xs text-slate-400">
                   Siswa hadir: <span class="font-bold text-white">{{ sesi.siswaHadir }}/{{ sesi.siswaTotal }}</span>
@@ -119,9 +134,15 @@
             <!-- Action button -->
             <div class="flex-shrink-0">
 
+              <!-- TERLEWAT — sesi tidak dimulai dalam 20 menit -->
+              <div v-if="sesi.isTerlewat"
+                   class="px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20">
+                ⚠️ Terlewat
+              </div>
+
               <!-- MULAI SESI — hanya jika slot aktif dan belum dimulai -->
               <button
-                v-if="sesi.isActive && sesi.status === 'PENDING'"
+                v-else-if="sesi.isActive && sesi.status === 'PENDING'"
                 @click="mulaiSesi(sesi)"
                 class="relative overflow-hidden flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
                 style="background: linear-gradient(135deg, #4F46E5, #7C3AED); box-shadow: 0 0 20px rgba(79,70,229,0.5), 0 0 40px rgba(79,70,229,0.2);">
@@ -349,13 +370,14 @@ const jadwalList = computed(() => {
     return {
       ...j,
       isActive: j.is_active,
+      isTerlewat: j.is_terlewat ?? false,
       status: j.status_sesi,
       statusSesi: j.status_sesi,
       jamMulai: j.jamMulai,
       jamSelesai: j.jamSelesai,
       durasiJP: 1,
       durasiMenit: 45,
-      siswaHadir: 0, // Belum ditarik dari DB
+      siswaHadir: 0,
       siswaTotal: 36,
     };
   });
