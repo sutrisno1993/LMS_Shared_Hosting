@@ -210,8 +210,24 @@ class StudentApiController extends Controller
             }
 
             foreach ($classSubjects as $cs) {
+                // Tentukan guru untuk mapel ini
+                $idGuru = $cs->id_guru_mutlak;
+                $guru = $cs->guruMutlak;
+
+                if (!$idGuru) {
+                    // Cari dari timetable
+                    $timetableEntry = Timetable::with('teacher')
+                        ->where('id_class_subject', $cs->id_class_subject)
+                        ->whereNotNull('id_guru')
+                        ->first();
+                    if ($timetableEntry) {
+                        $idGuru = $timetableEntry->id_guru;
+                        $guru = $timetableEntry->teacher;
+                    }
+                }
+
                 $tpList = LearningObjective::where('id_mapel', $cs->id_mapel)
-                    ->where('id_guru', $cs->id_guru_mutlak)
+                    ->where('id_guru', $idGuru)
                     ->orderBy('kode_tp')
                     ->get();
 
@@ -276,6 +292,7 @@ class StudentApiController extends Controller
                 $nilaiList[] = [
                     'id_mapel' => $cs->id_mapel,
                     'nama_mapel' => $cs->subject->nama_mapel ?? 'Unknown',
+                    'nama_guru' => $guru->nama_guru ?? 'Unknown',
                     'nilai_akhir' => (int) $nilaiAkhir,
                     'kkm' => 75,
                     'status' => $nilaiAkhir >= 75 ? 'LULUS' : 'REMEDIAL',

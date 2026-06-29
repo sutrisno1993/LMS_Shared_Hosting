@@ -294,9 +294,25 @@ class SiswaController extends Controller
             }
 
             foreach ($classSubjects as $cs) {
-                // 1. Ambil Tujuan Pembelajaran (TP) untuk mapel ini
+                // Tentukan guru untuk mapel ini
+                $idGuru = $cs->id_guru_mutlak;
+                $guru = $cs->guruMutlak;
+
+                if (!$idGuru) {
+                    // Cari dari timetable
+                    $timetableEntry = \App\Models\Timetable::with('teacher')
+                        ->where('id_class_subject', $cs->id_class_subject)
+                        ->whereNotNull('id_guru')
+                        ->first();
+                    if ($timetableEntry) {
+                        $idGuru = $timetableEntry->id_guru;
+                        $guru = $timetableEntry->teacher;
+                    }
+                }
+
+                // 1. Ambil Tujuan Pembelajaran (TP) untuk mapel dan guru ini
                 $tpList = \App\Models\LearningObjective::where('id_mapel', $cs->id_mapel)
-                    ->where('id_guru', $cs->id_guru_mutlak)
+                    ->where('id_guru', $idGuru)
                     ->orderBy('kode_tp')
                     ->get();
 
@@ -379,7 +395,7 @@ class SiswaController extends Controller
                 $nilaiList[] = [
                     'id' => $cs->id_class_subject,
                     'nama' => $cs->subject->nama_mapel ?? 'Unknown',
-                    'guru' => $cs->guruMutlak->nama_guru ?? 'Unknown',
+                    'guru' => $guru->nama_guru ?? 'Unknown',
                     'nilai' => $nilaiAkhir,
                     'rataTP' => $rataTP,
                     'sas' => $nilaiSAS,
