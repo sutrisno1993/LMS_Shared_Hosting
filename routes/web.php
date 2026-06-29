@@ -126,6 +126,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/reset-requests', [\App\Http\Controllers\PasswordResetController::class, 'listTeacherRequests'])->name('reset-requests.index');
     Route::post('/reset-requests/{id}/approve', [\App\Http\Controllers\PasswordResetController::class, 'approveTeacherRequest'])->name('reset-requests.approve');
     Route::post('/reset-requests/{id}/reject', [\App\Http\Controllers\PasswordResetController::class, 'rejectTeacherRequest'])->name('reset-requests.reject');
+
+    // Ganti Tahun Ajaran
+    Route::get('/tahun-ajaran', [\App\Http\Controllers\TahunAjaranController::class, 'index'])->name('tahun-ajaran');
+    Route::post('/tahun-ajaran/execute', [\App\Http\Controllers\TahunAjaranController::class, 'execute'])->name('tahun-ajaran.execute');
 });
 
 // Guru routes

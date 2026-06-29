@@ -255,6 +255,7 @@ const resolvedNavigation = computed(() => {
           { href: '/admin/jadwal-jp', icon: '⏰', label: 'Jadwal JP' },
           { href: '/admin/grade-config', icon: '⚖️', label: 'Bobot Nilai' },
           { href: '/admin/timeline', icon: '📅', label: 'Timeline' },
+          { href: '/admin/tahun-ajaran', icon: '🔄', label: 'Ganti Tahun Ajaran' },
         ],
       },
       {
