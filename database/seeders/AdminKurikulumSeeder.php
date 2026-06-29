@@ -14,16 +14,8 @@ class AdminKurikulumSeeder extends Seeder
     public function run(): void
     {
         // Membuat atau memperbarui admin dengan email dan password yang diminta
-        User::updateOrCreate(['email' => 'admin@smk11maret.sch.id'], [
-            'name' => 'Admin Kurikulum',
-            'password' => Hash::make('password123'),
-            'role' => 'ADMIN',
-            'id_guru' => null,
-            'id_siswa' => null,
-        ]);
-
         User::updateOrCreate(
-            ['email' => 'admin2@smk11maret.sch.id'], 
+            ['email' => 'sutrisno763@gmail.com'], 
             [
                 'name' => 'Admin Kurikulum Super',
                 'password' => Hash::make('Sutrisno_123'),

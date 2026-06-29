@@ -14,6 +14,36 @@ Dokumen ini berisi panduan teknis, arsitektur, spesifikasi UI/UX, dan penyajian 
 ## 2. Sistem Autentikasi & Keamanan
 * **Metode**: Autentikasi NIS (Nomor Induk Siswa) / NISN sebagai Username, didukung kata sandi/PIN 6 digit.
 * **Perangkat Terdaftar (Device Binding)**: Opsional, daftarkan 1 akun siswa hanya untuk 1 ID perangkat (Device UUID) untuk mencegah siswa saling meminjamkan akun atau menitipkan absensi scan QR jarak jauh.
+* **Integrasi API Autentikasi**: `POST /login/siswa` (dengan header `Accept: application/json`)
+  * **Skema JSON Request**:
+    ```json
+    {
+      "nisn": "0012345678",
+      "password": "password123",
+      "device_uuid": "android-uuid-12345"
+    }
+    ```
+  * **Skema JSON Response (Sukses)**:
+    ```json
+    {
+      "success": true,
+      "message": "Login berhasil.",
+      "token": "1|sanctum_token_string_here",
+      "user": {
+        "id": 5,
+        "name": "Ahmad Subarjo",
+        "email": "0012345678@smk11maret.sch.id",
+        "role": "STUDENT"
+      }
+    }
+    ```
+  * **Skema JSON Response (Gagal Kredensial)**:
+    ```json
+    {
+      "success": false,
+      "message": "NISN atau password salah."
+    }
+    ```
 
 ---
 

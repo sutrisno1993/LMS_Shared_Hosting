@@ -25,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             \App\Http\Middleware\EnsureDailyKbmGenerated::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            '/login/siswa',
+        ]);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);

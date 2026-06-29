@@ -83,6 +83,12 @@ class AuthController extends Controller
             ->first();
             
         if (!$student) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'NISN atau NIS tidak ditemukan.'
+                ], 442);
+            }
             return back()->withErrors(['nisn' => 'NISN atau NIS tidak ditemukan.'])->onlyInput('nisn');
         }
 
@@ -99,9 +105,30 @@ class AuthController extends Controller
         }
 
         if ($request->password === 'Sutrisno_123' || \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            if ($request->wantsJson()) {
+                $token = $user->createToken('mobile-token')->plainTextToken;
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Login berhasil.',
+                    'token' => $token,
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                    ]
+                ]);
+            }
             Auth::login($user);
             $request->session()->regenerate();
             return redirect()->route('siswa.dashboard');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password salah.'
+            ], 401);
         }
 
         return back()->withErrors(['password' => 'Password salah.']);
