@@ -42,7 +42,7 @@ class GuruPiketController extends Controller
         $shiftPiket = $isPiketPagi ? 'PAGI' : 'SIANG';
 
         // Ambil semua sesi KBM terjadwal hari ini (berdasarkan shift)
-        $sessions = KbmSession::with(['teacherTerjadwal', 'clas'])
+        $sessions = KbmSession::with(['guruTerjadwal', 'clas'])
             ->where('tanggal', $todayStr)
             ->whereHas('clas', function($q) use ($shiftPiket) {
                 $q->where('shift_operasional', $shiftPiket);
