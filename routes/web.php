@@ -74,9 +74,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
     
     // Manajemen Siswa
     Route::get('/siswa', [AdminController::class, 'siswaIndex'])->name('siswa');
+    Route::post('/siswa', [AdminController::class, 'storeSiswa'])->name('siswa.store');
+    Route::put('/siswa/{id}', [AdminController::class, 'updateSiswa'])->name('siswa.update');
+    Route::delete('/siswa/{id}', [AdminController::class, 'deleteSiswa'])->name('siswa.delete');
     Route::get('/siswa/export', [AdminController::class, 'exportSiswa'])->name('siswa.export');
     Route::post('/siswa/import', [AdminController::class, 'importSiswa'])->name('siswa.import');
     Route::post('/siswa/import-confirm', [AdminController::class, 'importConfirmSiswa'])->name('siswa.import-confirm');
+
+    // Daftar Guru
+    Route::get('/guru', [AdminController::class, 'guruIndex'])->name('guru');
     
     // Timeline / Kalender Akademik
     Route::get('/timeline', [AdminController::class, 'timeline'])->name('timeline');
@@ -211,3 +217,9 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('walikelas')->name('walikela
     Route::post('/reset-requests/{id}/approve', [\App\Http\Controllers\PasswordResetController::class, 'approveStudentRequest'])->name('reset-requests.approve');
     Route::post('/reset-requests/{id}/reject', [\App\Http\Controllers\PasswordResetController::class, 'rejectStudentRequest'])->name('reset-requests.reject');
 });
+
+if (app()->environment(['local', 'development'])) {
+    Route::post('/dev/time/update', [\App\Http\Controllers\DevTimeController::class, 'update'])->name('dev.time.update');
+    Route::post('/dev/time/reset', [\App\Http\Controllers\DevTimeController::class, 'reset'])->name('dev.time.reset');
+}
+

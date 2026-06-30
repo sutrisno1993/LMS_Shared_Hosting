@@ -42,3 +42,10 @@ composer:
 setup:
 	cp .env.docker .env
 	docker compose up -d --build
+
+# Local development targets (no Docker)
+local-serve:
+	php artisan serve
+
+local-migrate:
+	php artisan migrate

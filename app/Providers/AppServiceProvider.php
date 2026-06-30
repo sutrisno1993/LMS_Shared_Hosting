@@ -31,6 +31,13 @@ class AppServiceProvider extends ServiceProvider
             \Carbon\Carbon::setTestNow(function () use ($offset) {
                 return \Carbon\Carbon::parse(date('Y-m-d H:i:s', time() + $offset));
             });
+
+            // Prevent logout when mocking time by setting massive session lifetime
+            // and setting expire_on_close to true (cookie expires on browser close, no absolute timestamp)
+            config([
+                'session.lifetime' => 5256000, // 10 years
+                'session.expire_on_close' => true,
+            ]);
         }
     }
 }

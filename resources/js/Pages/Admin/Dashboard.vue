@@ -205,6 +205,18 @@
                  <div class="text-[10px] text-slate-300 uppercase font-bold tracking-wider mb-1">{{ cls.details.mapel }}</div>
                  <div class="text-xs text-white font-semibold truncate">{{ cls.details.guru }}</div>
                </div>
+
+               <!-- WhatsApp Button on Card if Empty / Late / Alpa -->
+               <div v-if="cls.details && (cls.statusText === 'Kosong / Belum Masuk' || cls.statusText === 'Guru Alpa / Kosong' || cls.statusText === 'Guru Terlambat') && cls.details.no_wa" class="mt-3">
+                 <a 
+                   :href="getWaLinkForTeacher(cls)"
+                   target="_blank"
+                   @click.stop
+                   class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold transition-all shadow-md flex items-center justify-center gap-1 border border-emerald-500/20"
+                 >
+                   <span>💬</span> Panggil Guru (WA)
+                 </a>
+               </div>
           </div>
         </div>
       </div>
@@ -256,7 +268,15 @@
             </div>
           </template>
         </div>
-        <div class="p-4 border-t border-white/5 bg-black/20 flex justify-end">
+        <div class="p-4 border-t border-white/5 bg-black/20 flex justify-end gap-2">
+           <a 
+             v-if="selectedClassDetail.details && (selectedClassDetail.statusText === 'Kosong / Belum Masuk' || selectedClassDetail.statusText === 'Guru Alpa / Kosong' || selectedClassDetail.statusText === 'Guru Terlambat') && selectedClassDetail.details.no_wa"
+             :href="getWaLinkForTeacher(selectedClassDetail)"
+             target="_blank"
+             class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white transition-colors flex items-center gap-1.5"
+           >
+             <span>💬</span> Hubungi Guru via WA
+           </a>
            <button @click="selectedClassDetail = null" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white transition-colors">Tutup</button>
         </div>
       </div>
@@ -413,6 +433,7 @@ const currentClassesStatus = computed(() => {
       details: {
         mapel: session.mapel,
         guru: session.guru,
+        no_wa: session.no_wa,
         jam_ke: session.jam_ke,
         materi: session.materi_log,
         scan: session.scan_masuk
@@ -420,6 +441,20 @@ const currentClassesStatus = computed(() => {
     };
   });
 });
+
+const getWaLinkForTeacher = (cls) => {
+  if (!cls.details || !cls.details.no_wa) return '#';
+  
+  let cleanNumber = cls.details.no_wa.replace(/[^0-9]/g, '');
+  if (cleanNumber.startsWith('0')) {
+    cleanNumber = '62' + cleanNumber.slice(1);
+  }
+  
+  const message = `Halo ${cls.details.guru}, jam pelajaran ${cls.details.mapel} di kelas ${cls.nama_kelas} belum masuk. Silakan masuk kelas.`;
+  const encodedText = encodeURIComponent(message);
+  
+  return `https://wa.me/${cleanNumber}?text=${encodedText}`;
+};
 
 const navigation = [
   {

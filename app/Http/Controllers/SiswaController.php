@@ -129,9 +129,10 @@ class SiswaController extends Controller
                 return response()->json(['message' => 'QR Code tidak valid!'], 400);
             }
 
-            // Validasi Kedaluwarsa (15 detik)
+            // Validasi Kedaluwarsa (15 detik, di-bypass jika local environment atau mode simulasi aktif)
             $diffSeconds = (time() * 1000 - $data['timestamp']) / 1000;
-            if ($diffSeconds > 15) {
+            $isMockTime = app()->environment(['local', 'development']) && \Illuminate\Support\Facades\Cache::has('time_offset');
+            if (!app()->environment(['local', 'development']) && !$isMockTime && ($diffSeconds > 15 || $diffSeconds < -15)) {
                 return response()->json(['message' => 'QR Code sudah KEDALUWARSA! Silakan scan QR terbaru di layar proyektor.'], 400);
             }
 

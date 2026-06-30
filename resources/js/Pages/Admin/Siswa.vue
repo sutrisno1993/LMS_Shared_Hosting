@@ -74,7 +74,15 @@
         <div class="rounded-2xl border border-white/8 flex flex-col h-full" style="background: var(--card)">
           <!-- Toolbar -->
           <div class="p-5 border-b border-white/8 flex flex-wrap items-center justify-between gap-4 bg-white/2">
-            <div class="font-bold text-sm">Daftar Siswa</div>
+            <div class="flex items-center gap-3">
+              <div class="font-bold text-sm">Daftar Siswa</div>
+              <button 
+                @click="openAddModal" 
+                class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-md hover:-translate-y-0.5"
+              >
+                ➕ Tambah Siswa
+              </button>
+            </div>
             
             <div class="flex items-center gap-3">
               <select 
@@ -98,11 +106,12 @@
                   <th class="px-5 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">NIS / NISN</th>
                   <th class="px-5 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Nama Lengkap</th>
                   <th class="px-5 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Kelas</th>
+                  <th class="px-5 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="students.data.length === 0">
-                  <td colspan="3" class="px-5 py-10 text-center text-sm text-slate-500">
+                  <td colspan="4" class="px-5 py-10 text-center text-sm text-slate-500">
                     Belum ada data siswa ditemukan.
                   </td>
                 </tr>
@@ -121,6 +130,24 @@
                       {{ siswa.clas?.nama_kelas || '-' }}
                     </span>
                   </td>
+                  <td class="px-5 py-3 text-right">
+                    <div class="inline-flex items-center gap-1.5">
+                      <button 
+                        @click="openEditModal(siswa)" 
+                        class="p-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded transition-colors text-xs"
+                        title="Edit Siswa"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        @click="deleteStudent(siswa.id_siswa)" 
+                        class="p-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded transition-colors text-xs"
+                        title="Hapus Siswa"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -131,6 +158,96 @@
             <div>Menampilkan {{ students.data.length }} dari {{ students.total }} total siswa</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- STUDENT FORM MODAL (ADD & EDIT) -->
+    <div v-if="showStudentModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div class="bg-[#1a1b2e] rounded-2xl border border-white/10 shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-5 border-b border-white/10 flex items-center justify-between bg-white/5">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <span>{{ isEditing ? '✏️' : '➕' }}</span> {{ isEditing ? 'Edit Data Siswa' : 'Tambah Siswa Baru' }}
+          </h2>
+          <button @click="showStudentModal = false" class="text-slate-400 hover:text-white transition-colors text-2xl leading-none">&times;</button>
+        </div>
+
+        <form @submit.prevent="submitStudentForm" class="p-6 space-y-4 overflow-y-auto">
+          <!-- Nama Siswa -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-slate-400">Nama Lengkap Siswa</label>
+            <input 
+              v-model="studentForm.nama_siswa" 
+              type="text" 
+              required 
+              placeholder="Contoh: Ahmad Budi"
+              class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <!-- NIS -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-slate-400">NIS (Nomor Induk Siswa)</label>
+            <input 
+              v-model="studentForm.nis" 
+              type="text" 
+              required 
+              placeholder="Contoh: 20231001"
+              class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <!-- NISN -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-slate-400">NISN (Nasional) - Opsional</label>
+            <input 
+              v-model="studentForm.nisn" 
+              type="text" 
+              placeholder="Contoh: 0012345678"
+              class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <!-- Kelas -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-slate-400">Kelas</label>
+            <select 
+              v-model="studentForm.id_kelas" 
+              required
+              class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="" disabled>Pilih Kelas...</option>
+              <option v-for="cls in classes" :key="cls.id_kelas" :value="cls.id_kelas">
+                {{ cls.nama_kelas }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Error Messages -->
+          <div v-if="studentForm.hasErrors" class="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl">
+            <ul class="list-disc pl-4 space-y-1">
+              <li v-for="(err, key) in studentForm.errors" :key="key">{{ err }}</li>
+            </ul>
+          </div>
+
+          <!-- Form Buttons -->
+          <div class="flex justify-end gap-3 pt-4 border-t border-white/10">
+            <button 
+              type="button" 
+              @click="showStudentModal = false" 
+              class="px-4 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 transition-colors text-slate-300"
+            >
+              Batal
+            </button>
+            <button 
+              type="submit" 
+              :disabled="studentForm.processing"
+              class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+            >
+              <span v-if="studentForm.processing" class="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin"></span>
+              {{ isEditing ? 'Simpan' : 'Tambah' }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -238,6 +355,65 @@ const hasErrors = computed(() => {
   return previewData.value.some(row => row.status === 'ERROR');
 });
 
+// Student Form CRUD state
+const showStudentModal = ref(false);
+const isEditing = ref(false);
+const editingStudentId = ref(null);
+
+const studentForm = useForm({
+  nis: '',
+  nisn: '',
+  nama_siswa: '',
+  id_kelas: ''
+});
+
+const openAddModal = () => {
+  studentForm.clearErrors();
+  studentForm.reset();
+  isEditing.value = false;
+  editingStudentId.value = null;
+  showStudentModal.value = true;
+};
+
+const openEditModal = (siswa) => {
+  studentForm.clearErrors();
+  studentForm.nis = siswa.nis;
+  studentForm.nisn = siswa.nisn || '';
+  studentForm.nama_siswa = siswa.nama_siswa;
+  studentForm.id_kelas = siswa.id_kelas;
+  isEditing.value = true;
+  editingStudentId.value = siswa.id_siswa;
+  showStudentModal.value = true;
+};
+
+const submitStudentForm = () => {
+  if (isEditing.value) {
+    studentForm.put(`/admin/siswa/${editingStudentId.value}`, {
+      onSuccess: () => {
+        showStudentModal.value = false;
+        window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Data siswa berhasil diperbarui!', type: 'success' } }));
+      }
+    });
+  } else {
+    studentForm.post('/admin/siswa', {
+      onSuccess: () => {
+        showStudentModal.value = false;
+        window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Siswa baru berhasil ditambahkan!', type: 'success' } }));
+      }
+    });
+  }
+};
+
+const deleteStudent = (id) => {
+  if (confirm('Apakah Anda yakin ingin menghapus data siswa ini? Ini juga akan menghapus akun login siswa.')) {
+    router.delete(`/admin/siswa/${id}`, {
+      onSuccess: () => {
+        window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Data siswa berhasil dihapus!', type: 'success' } }));
+      }
+    });
+  }
+};
+
 // Navigation
 const navigation = [
   {
@@ -251,6 +427,7 @@ const navigation = [
     items: [
       { href: '/admin/wali-kelas', icon: '👤', label: 'Wali Kelas' },
       { href: '/admin/siswa', icon: '👥', label: 'Data Siswa' },
+      { href: '/admin/guru', icon: '👨‍🏫', label: 'Daftar Guru' },
       { href: '/admin/events', icon: '🗓️', label: 'Event & Libur' },
       { href: '/admin/kuesioner', icon: '⭐', label: 'Kuesioner Kinerja' },
     ],

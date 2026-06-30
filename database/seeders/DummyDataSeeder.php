@@ -23,21 +23,23 @@ class DummyDataSeeder extends Seeder
         // 2. Buat Akun Users Dummy (Guru & Siswa)
         $password = Hash::make('password123');
 
-        User::updateOrCreate(['email' => 'reza.patriota@smk11maret.sch.id'], [
-            'name' => 'Reza Patriota Putra, S.Kom',
-            'password' => $password,
-            'role' => 'TEACHER',
-            'id_guru' => 24, // Sesuaikan dengan id_guru Reza di DB
-            'id_siswa' => null,
-        ]);
+        // Buat User untuk semua Guru di tabel teachers
+        $teachers = DB::table('teachers')->get();
+        foreach ($teachers as $t) {
+            $cleanName = strtolower(preg_replace('/[^a-zA-Z]/', '', explode(',', $t->nama_guru)[0]));
+            $email = $cleanName . '@teacher.smk11maret.sch.id';
 
-        User::updateOrCreate(['email' => 'sari.widyastuti@smk11maret.sch.id'], [
-            'name' => 'Guru Lainnya / Wali Kelas',
-            'password' => $password,
-            'role' => 'TEACHER', 
-            'id_guru' => 2, // Asumsi id_guru 2 ada
-            'id_siswa' => null,
-        ]);
+            User::updateOrCreate(
+                ['email' => $email],
+                [
+                    'name' => $t->nama_guru,
+                    'password' => $password,
+                    'role' => 'TEACHER',
+                    'id_guru' => $t->id_guru,
+                    'id_siswa' => null,
+                ]
+            );
+        }
 
         User::updateOrCreate(['email' => '2024001@smk11maret.sch.id'], [
             'name' => 'Ahmad Rifai',

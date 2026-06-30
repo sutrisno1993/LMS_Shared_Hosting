@@ -279,7 +279,7 @@
 </template>
 
 <script setup>
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import QrcodeVue from 'qrcode.vue';
@@ -309,9 +309,11 @@ const launchExam = () => {
 // ---- QR Code Payload ----
 const qrPayload = ref('');
 const generateQrPayload = () => {
+  const page = usePage();
+  const offset = page.props.app?.time_offset || 0;
   return JSON.stringify({
     id_kbm_session: props.sessionId,
-    timestamp: Date.now()
+    timestamp: Date.now() + offset
   });
 };
 

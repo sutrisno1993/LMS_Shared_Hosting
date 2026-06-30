@@ -51,8 +51,30 @@
           </div>
         </div>
 
-        <!-- Jam Server Widget -->
-        <div class="flex items-center gap-2.5 bg-[#1E293B]/80 border border-white/10 px-3 py-2 rounded-xl">
+        <!-- Jam Server Widget (Clickable if in local environment to override time) -->
+        <button
+          v-if="$page.props.app?.is_local_env"
+          @click="openDevTimeModal"
+          :class="[
+            'flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all text-left w-full cursor-pointer',
+            $page.props.app?.is_mock_time 
+              ? 'bg-amber-500/10 border-amber-500/40 hover:bg-amber-500/20 text-amber-400 font-bold' 
+              : 'bg-[#1E293B]/80 border-white/10 hover:bg-white/5 text-white'
+          ]"
+          title="Klik untuk memanipulasi waktu (Dev Mode)"
+        >
+          <span class="text-base text-indigo-400 animate-pulse">⌚</span>
+          <div class="flex flex-col justify-center">
+            <span class="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5" :class="$page.props.app?.is_mock_time ? 'text-amber-500' : 'text-slate-500'">
+              {{ $page.props.app?.is_mock_time ? 'Simulasi Jam' : 'Jam Server' }}
+            </span>
+            <span class="text-sm font-mono font-bold leading-none tracking-tight">{{ serverTimeString }}</span>
+          </div>
+        </button>
+        <div
+          v-else
+          class="flex items-center gap-2.5 bg-[#1E293B]/80 border border-white/10 px-3 py-2 rounded-xl"
+        >
           <span class="text-base text-indigo-400 animate-pulse">⌚</span>
           <div class="flex flex-col justify-center">
             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-0.5">Jam Server</span>
@@ -145,9 +167,31 @@
           </div>
         </div>
 
-        <!-- Jam Server Widget -->
-        <div class="hidden md:flex items-center gap-2.5 bg-[#1E293B]/80 border border-white/10 px-3 py-1.5 rounded-xl shadow-inner mr-2">
-          <span class="text-base text-indigo-400" :class="{'animate-pulse': true}">⌚</span>
+        <!-- Jam Server Widget (Clickable if in local environment to override time) -->
+        <button
+          v-if="$page.props.app?.is_local_env"
+          @click="openDevTimeModal"
+          :class="[
+            'hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-xl shadow-inner mr-2 border transition-all text-left cursor-pointer',
+            $page.props.app?.is_mock_time 
+              ? 'bg-amber-500/10 border-amber-500/40 hover:bg-amber-500/20 text-amber-400 font-bold' 
+              : 'bg-[#1E293B]/80 border-white/10 hover:bg-white/5 text-white'
+          ]"
+          title="Klik untuk memanipulasi waktu (Dev Mode)"
+        >
+          <span class="text-base text-indigo-400" :class="{'animate-pulse': !$page.props.app?.is_mock_time}">⌚</span>
+          <div class="flex flex-col justify-center">
+            <span class="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5" :class="$page.props.app?.is_mock_time ? 'text-amber-500' : 'text-slate-500'">
+              {{ $page.props.app?.is_mock_time ? 'Simulasi Jam' : 'Jam Server' }}
+            </span>
+            <span class="text-sm font-mono font-bold leading-none tracking-tight">{{ serverTimeString }}</span>
+          </div>
+        </button>
+        <div
+          v-else
+          class="hidden md:flex items-center gap-2.5 bg-[#1E293B]/80 border border-white/10 px-3 py-1.5 rounded-xl shadow-inner mr-2"
+        >
+          <span class="text-base text-indigo-400 animate-pulse">⌚</span>
           <div class="flex flex-col justify-center">
             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-0.5">Jam Server</span>
             <span class="text-sm font-mono font-bold text-white leading-none tracking-tight">{{ serverTimeString }}</span>
@@ -170,6 +214,108 @@
     <main class="flex-1 p-7 relative">
       <slot />
     </main>
+  </div>
+
+  <!-- Dev Time Override Modal -->
+  <div v-if="showDevTimeModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+    <div class="bg-[#111827] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-indigo-600 to-violet-700 text-white flex items-center justify-between">
+        <h3 class="font-bold text-lg flex items-center gap-2">
+          <span>⏰</span> Dev Time Manipulator
+        </h3>
+        <button @click="showDevTimeModal = false" class="text-white/70 hover:text-white text-xl font-bold cursor-pointer">×</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-4">
+        <p class="text-xs text-slate-400">
+          Gunakan fitur ini untuk memanipulasi waktu pada sistem (Carbon / Jam Server) untuk menguji jadwal KBM, absensi, ujian live, atau fitur berbasis waktu lainnya.
+        </p>
+
+        <!-- Status & Current Mock Info -->
+        <div class="bg-white/5 border border-white/8 rounded-xl p-3.5 space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-slate-500">Status Waktu:</span>
+            <span v-if="$page.props.app?.is_mock_time" class="px-2 py-0.5 bg-amber-500/20 text-amber-400 font-semibold rounded-full text-[10px]">
+              Simulasi Aktif
+            </span>
+            <span v-else class="text-emerald-400 font-semibold">
+              Waktu Sistem Riil
+            </span>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-slate-500">Waktu Sekarang:</span>
+            <span class="font-mono text-white font-semibold">{{ $page.props.app?.current_time }}</span>
+          </div>
+        </div>
+
+        <!-- Time Picker Form -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold text-slate-400">Pilih Tanggal & Jam Baru:</label>
+          <input 
+            type="datetime-local" 
+            v-model="localDateTimeString"
+            :min="minDateTimeString"
+            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          />
+        </div>
+
+        <!-- Quick Shortcuts -->
+        <div class="space-y-1.5">
+          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Jalan Pintas Cepat:</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button 
+              type="button"
+              @click="setQuickTime('kbm-pagi')" 
+              class="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-[11px] text-slate-300 rounded-lg border border-white/5 cursor-pointer text-center font-medium transition-colors"
+            >
+              🌅 07:30 Pagi
+            </button>
+            <button 
+              type="button"
+              @click="setQuickTime('kbm-siang')" 
+              class="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-[11px] text-slate-300 rounded-lg border border-white/5 cursor-pointer text-center font-medium transition-colors"
+            >
+              ☀️ 13:00 Siang
+            </button>
+            <button 
+              type="button"
+              @click="setQuickTime('besok')" 
+              class="px-2 py-1.5 bg-white/5 hover:bg-white/10 text-[11px] text-slate-300 rounded-lg border border-white/5 cursor-pointer text-center font-medium transition-colors"
+            >
+              📅 Besok 08:00
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 bg-white/5 border-t border-white/8 flex gap-3">
+        <button 
+          v-if="$page.props.app?.is_mock_time" 
+          type="button"
+          @click="resetDevTime"
+          class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+        >
+          Reset Waktu
+        </button>
+        <button 
+          type="button"
+          @click="submitDevTime"
+          class="ml-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors shadow-lg shadow-indigo-600/30"
+        >
+          Terapkan
+        </button>
+        <button 
+          type="button"
+          @click="showDevTimeModal = false"
+          class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs font-bold rounded-xl cursor-pointer transition-colors"
+        >
+          Batal
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Global Toast Notification -->
@@ -223,6 +369,7 @@ const resolvedNavigation = computed(() => {
         items: [
           { href: '/admin/wali-kelas', icon: '👤', label: 'Wali Kelas' },
           { href: '/admin/siswa', icon: '👥', label: 'Data Siswa' },
+          { href: '/admin/guru', icon: '👨‍🏫', label: 'Daftar Guru' },
           { href: '/admin/events', icon: '🗓️', label: 'Event & Libur' },
           { href: '/admin/kuesioner', icon: '⭐', label: 'Kuesioner Kinerja' },
           { href: '/admin/reset-requests', icon: '🔑', label: 'Reset Password Guru' },
@@ -396,6 +543,66 @@ const userInitial = computed(() => {
   const name = page.props.auth?.user?.name || 'U';
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 });
+
+
+const showDevTimeModal = ref(false);
+const localDateTimeString = ref('');
+const devTimeForm = useForm({
+  target_time: '',
+});
+
+const minDateTimeString = computed(() => {
+  const realTimeStr = page.props.app?.real_time;
+  if (!realTimeStr) return '';
+  return realTimeStr.replace(' ', 'T').slice(0, 16);
+});
+
+const openDevTimeModal = () => {
+  // Format current simulated server time to fit datetime-local input (YYYY-MM-DDTHH:mm)
+  const now = new Date(serverTime.value.getTime() - serverTime.value.getTimezoneOffset() * 60000);
+  localDateTimeString.value = now.toISOString().slice(0, 16);
+  showDevTimeModal.value = true;
+};
+
+const setQuickTime = (type) => {
+  const d = new Date(serverTime.value);
+  const realTime = page.props.app?.real_time ? new Date(page.props.app.real_time.replace(' ', 'T')) : new Date();
+  
+  if (type === 'kbm-pagi') {
+    d.setHours(7, 30, 0);
+    if (d < realTime) {
+      d.setDate(d.getDate() + 1);
+    }
+  } else if (type === 'kbm-siang') {
+    d.setHours(13, 0, 0);
+    if (d < realTime) {
+      d.setDate(d.getDate() + 1);
+    }
+  } else if (type === 'besok') {
+    d.setDate(d.getDate() + 1);
+    d.setHours(8, 0, 0);
+  }
+  const tzOffset = d.getTimezoneOffset() * 60000;
+  localDateTimeString.value = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+};
+
+const submitDevTime = () => {
+  const formatted = localDateTimeString.value.replace('T', ' ') + ':00';
+  devTimeForm.target_time = formatted;
+  devTimeForm.post('/dev/time/update', {
+    onSuccess: () => {
+      showDevTimeModal.value = false;
+    }
+  });
+};
+
+const resetDevTime = () => {
+  router.post('/dev/time/reset', {}, {
+    onSuccess: () => {
+      showDevTimeModal.value = false;
+    }
+  });
+};
 
 
 // Global Toast System Logic

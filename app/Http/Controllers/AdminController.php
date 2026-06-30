@@ -56,6 +56,7 @@ class AdminController extends Controller
                 'id_kelas' => $session->id_kelas,
                 'mapel' => $session->subject ? $session->subject->nama_mapel : '-',
                 'guru' => $session->guruAktual ? $session->guruAktual->nama_guru : '-',
+                'no_wa' => $session->guruAktual ? $session->guruAktual->no_wa : null,
                 'jam_ke' => $session->jam_ke ?? '-',
                 'waktu' => $waktu,
                 'status' => $session->status_guru,
@@ -267,6 +268,88 @@ class AdminController extends Controller
             'students' => $students,
             'classes' => $classes,
             'filters' => $request->only(['id_kelas'])
+        ]);
+    }
+
+    /**
+     * Simpan Siswa Baru Secara Manual
+     */
+    public function storeSiswa(Request $request)
+    {
+        $request->validate([
+            'nis' => 'required|string|max:20|unique:students,nis',
+            'nisn' => 'nullable|string|max:20|unique:students,nisn',
+            'nama_siswa' => 'required|string|max:255',
+            'id_kelas' => 'required|exists:classes,id_kelas',
+        ]);
+
+        \App\Models\Student::create([
+            'nis' => $request->nis,
+            'nisn' => $request->nisn,
+            'nama_siswa' => $request->nama_siswa,
+            'id_kelas' => $request->id_kelas,
+        ]);
+
+        return redirect()->back()->with('success', 'Siswa baru berhasil ditambahkan!');
+    }
+
+    /**
+     * Perbarui Data Siswa Secara Manual
+     */
+    public function updateSiswa(Request $request, $id)
+    {
+        $siswa = \App\Models\Student::findOrFail($id);
+
+        $request->validate([
+            'nis' => 'required|string|max:20|unique:students,nis,' . $id . ',id_siswa',
+            'nisn' => 'nullable|string|max:20|unique:students,nisn,' . $id . ',id_siswa',
+            'nama_siswa' => 'required|string|max:255',
+            'id_kelas' => 'required|exists:classes,id_kelas',
+        ]);
+
+        $siswa->update([
+            'nis' => $request->nis,
+            'nisn' => $request->nisn,
+            'nama_siswa' => $request->nama_siswa,
+            'id_kelas' => $request->id_kelas,
+        ]);
+
+        // Sinkronisasi data user jika akun user untuk siswa ini sudah dibuat
+        $user = \App\Models\User::where('id_siswa', $siswa->id_siswa)->first();
+        if ($user) {
+            $user->update([
+                'name' => $request->nama_siswa,
+                'email' => ($request->nisn ?: $request->nis) . '@smk11maret.sch.id',
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Data siswa berhasil diperbarui!');
+    }
+
+    /**
+     * Hapus Data Siswa
+     */
+    public function deleteSiswa($id)
+    {
+        $siswa = \App\Models\Student::findOrFail($id);
+        
+        // Hapus akun user terkait jika ada
+        \App\Models\User::where('id_siswa', $siswa->id_siswa)->delete();
+
+        $siswa->delete();
+
+        return redirect()->back()->with('success', 'Data siswa berhasil dihapus!');
+    }
+
+    /**
+     * Tampilkan Daftar Guru (Nama & No WA)
+     */
+    public function guruIndex()
+    {
+        $teachers = \App\Models\Teacher::orderBy('nama_guru')->get();
+
+        return Inertia::render('Admin/Guru', [
+            'teachers' => $teachers
         ]);
     }
 

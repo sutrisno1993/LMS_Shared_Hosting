@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->validateCsrfTokens(except: [
             '/login/siswa',
+            '/dev/time/*',
         ]);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,

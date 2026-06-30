@@ -67,7 +67,9 @@ class HandleInertiaRequests extends Middleware
                 ],
                 'is_local_env' => app()->environment(['local', 'development']),
                 'current_time' => now()->format('Y-m-d H:i:s'),
-                'is_mock_time' => \Illuminate\Support\Facades\Cache::has('time_offset'),
+                'is_mock_time' => app()->environment(['local', 'development']) && \Illuminate\Support\Facades\Cache::has('time_offset'),
+                'time_offset' => app()->environment(['local', 'development']) ? (\Illuminate\Support\Facades\Cache::get('time_offset', 0) * 1000) : 0,
+                'real_time' => date('Y-m-d H:i:s'),
                 'today_schedules' => \Illuminate\Support\Facades\Cache::remember('jp_schedules_today_' . now()->dayOfWeek, 60 * 60, function () {
                     $days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
                     return \App\Models\JpSchedule::where('hari', $days[now()->dayOfWeek])->get();
