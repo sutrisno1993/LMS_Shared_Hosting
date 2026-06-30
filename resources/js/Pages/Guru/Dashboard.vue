@@ -268,11 +268,23 @@ const props = defineProps({
   isPiketToday: Boolean,
 });
 
-// Live clock
+// Live clock aligned with simulated server time
 const now = ref(new Date());
-let clockInterval;
-onMounted(() => { clockInterval = setInterval(() => now.value = new Date(), 1000); });
-onUnmounted(() => clearInterval(clockInterval));
+let clockInterval = null;
+
+onMounted(() => {
+  if (page.props.app?.current_time) {
+    now.value = new Date(page.props.app.current_time);
+  }
+  
+  clockInterval = setInterval(() => {
+    now.value = new Date(now.value.getTime() + 1000);
+  }, 1000);
+});
+
+onUnmounted(() => {
+  if (clockInterval) clearInterval(clockInterval);
+});
 
 const currentTime = computed(() =>
   now.value.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })

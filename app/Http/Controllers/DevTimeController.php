@@ -33,6 +33,23 @@ class DevTimeController extends Controller
             Cache::forget('jp_schedules_today_' . $i);
         }
 
+        // Reset KBM sessions on the target simulated date back to PENDING
+        // and delete related student attendances to allow clean KBM simulation testing
+        $targetDate = $target->toDateString();
+        Cache::forget('kbm_generated_' . $targetDate);
+        
+        $sessions = \App\Models\KbmSession::where('tanggal', $targetDate)->get();
+        foreach ($sessions as $session) {
+            $session->status_sesi = 'PENDING';
+            $session->status_guru = 'PENDING';
+            $session->waktu_scan_masuk = null;
+            $session->waktu_scan_keluar = null;
+            $session->materi_log = null;
+            $session->save();
+
+            \App\Models\StudentAttendance::where('id_kbm_session', $session->id)->delete();
+        }
+
         return back()->with('success', 'Waktu simulasi berhasil diatur ke ' . $request->target_time);
     }
 
