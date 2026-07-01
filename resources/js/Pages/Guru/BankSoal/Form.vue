@@ -65,14 +65,10 @@
             <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <label class="text-xs font-semibold text-slate-400">Pertanyaan</label>
-                
-                <label class="text-xs font-bold text-indigo-400 hover:text-indigo-300 cursor-pointer flex items-center gap-1 transition-colors">
-                  <span>🖼️</span> {{ q.gambar_pertanyaan ? 'Ganti Gambar' : 'Tambah Gambar Soal' }}
-                  <input type="file" accept="image/*" class="hidden" @change="e => handleImageUpload(e, q, 'gambar_pertanyaan')">
-                </label>
+                <span class="text-[10px] text-slate-500 font-medium">Bisa Paste (Ctrl+V) Gambar di kolom pertanyaan</span>
               </div>
               
-              <textarea v-model="q.pertanyaan" required rows="3" placeholder="Ketik pertanyaan di sini (Anda juga bisa menempel/Paste Ctrl+V gambar secara langsung)..." class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" @paste="e => handlePasteImage(e, q)"></textarea>
+              <textarea v-model="q.pertanyaan" required rows="3" placeholder="Ketik pertanyaan di sini (Anda juga bisa menempel/Paste Ctrl+V gambar secara langsung)..." class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" @paste="e => handlePasteImage(e, q, 'gambar_pertanyaan')"></textarea>
               
               <!-- Pratinjau Gambar Soal -->
               <div v-if="q.gambar_pertanyaan" class="relative inline-block mt-2 rounded-xl overflow-hidden border border-white/10 bg-black/40 p-2">
@@ -90,12 +86,14 @@
                   <input type="radio" :name="`correct_${index}`" :value="opt" v-model="q.jawaban_benar" required class="w-4 h-4 text-indigo-600 bg-black/50 border-white/20 focus:ring-indigo-500">
                   <div class="flex-1 flex items-center gap-2">
                     <span class="text-xs font-bold w-4 text-slate-400">{{ opt }}.</span>
-                    <input v-model="q[`opsi_${opt.toLowerCase()}`]" type="text" required :placeholder="`Pilihan ${opt}`" class="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 border-0">
-                    
-                    <label class="p-2 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer flex items-center justify-center transition-all flex-shrink-0" title="Tambah Gambar Opsi">
-                      <span>🖼️</span>
-                      <input type="file" accept="image/*" class="hidden" @change="e => handleImageUpload(e, q, `gambar_opsi_${opt.toLowerCase()}`)">
-                    </label>
+                    <input 
+                      v-model="q[`opsi_${opt.toLowerCase()}`]" 
+                      type="text" 
+                      required 
+                      :placeholder="`Pilihan ${opt} (Bisa Paste Ctrl+V Gambar)`" 
+                      class="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 border-0"
+                      @paste="e => handlePasteImage(e, q, `gambar_opsi_${opt.toLowerCase()}`)"
+                    >
                   </div>
                 </div>
 
@@ -264,23 +262,7 @@ const showImportModal = ref(false);
 const rawImportText = ref('');
 const importError = ref('');
 
-const handleImageUpload = (e, q, field) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  
-  if (file.size > 2 * 1024 * 1024) {
-    alert('Ukuran gambar maksimal adalah 2MB');
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    q[field] = event.target.result;
-  };
-  reader.readAsDataURL(file);
-};
-
-const handlePasteImage = (e, q) => {
+const handlePasteImage = (e, q, field) => {
   const clipboardItems = e.clipboardData || e.originalEvent?.clipboardData;
   if (!clipboardItems) return;
 
@@ -299,7 +281,7 @@ const handlePasteImage = (e, q) => {
 
       const reader = new FileReader();
       reader.onload = (event) => {
-        q.gambar_pertanyaan = event.target.result;
+        q[field] = event.target.result;
       };
       reader.readAsDataURL(file);
       break;
