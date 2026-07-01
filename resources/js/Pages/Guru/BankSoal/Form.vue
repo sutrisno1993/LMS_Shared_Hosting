@@ -72,7 +72,7 @@
                 </label>
               </div>
               
-              <textarea v-model="q.pertanyaan" required rows="3" placeholder="Ketik pertanyaan di sini..." class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+              <textarea v-model="q.pertanyaan" required rows="3" placeholder="Ketik pertanyaan di sini (Anda juga bisa menempel/Paste Ctrl+V gambar secara langsung)..." class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" @paste="e => handlePasteImage(e, q)"></textarea>
               
               <!-- Pratinjau Gambar Soal -->
               <div v-if="q.gambar_pertanyaan" class="relative inline-block mt-2 rounded-xl overflow-hidden border border-white/10 bg-black/40 p-2">
@@ -278,6 +278,33 @@ const handleImageUpload = (e, q, field) => {
     q[field] = event.target.result;
   };
   reader.readAsDataURL(file);
+};
+
+const handlePasteImage = (e, q) => {
+  const clipboardItems = e.clipboardData || e.originalEvent?.clipboardData;
+  if (!clipboardItems) return;
+
+  for (let i = 0; i < clipboardItems.items.length; i++) {
+    const item = clipboardItems.items[i];
+    if (item.type.indexOf('image') !== -1) {
+      const file = item.getAsFile();
+      if (!file) continue;
+
+      e.preventDefault(); // Prevent pasting file path/names as text
+
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Ukuran gambar maksimal adalah 2MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        q.gambar_pertanyaan = event.target.result;
+      };
+      reader.readAsDataURL(file);
+      break;
+    }
+  }
 };
 
 const removeImage = (q, field) => {
