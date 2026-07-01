@@ -250,15 +250,42 @@
           </div>
         </div>
 
-        <!-- Time Picker Form -->
+        <!-- Time Picker Form (24 Hour Format Dropdown) -->
         <div class="space-y-1.5">
-          <label class="text-xs font-semibold text-slate-400">Pilih Tanggal & Jam Baru:</label>
-          <input 
-            type="datetime-local" 
-            v-model="localDateTimeString"
-            :min="minDateTimeString"
-            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
+          <label class="text-xs font-semibold text-slate-400">Pilih Tanggal & Jam Baru (Format 24 Jam):</label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <!-- Date input -->
+            <div class="sm:col-span-1">
+              <input 
+                type="date" 
+                v-model="pickerDate"
+                class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            <!-- Hour select -->
+            <div class="flex items-center gap-1 sm:col-span-1">
+              <select 
+                v-model="pickerHour"
+                class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono"
+              >
+                <option v-for="h in 24" :key="h-1" :value="String(h-1).padStart(2, '0')" class="bg-[#111827]">
+                  {{ String(h-1).padStart(2, '0') }}
+                </option>
+              </select>
+              <span class="text-slate-500 font-bold">:</span>
+            </div>
+            <!-- Minute select -->
+            <div class="sm:col-span-1">
+              <select 
+                v-model="pickerMinute"
+                class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono"
+              >
+                <option v-for="m in 60" :key="m-1" :value="String(m-1).padStart(2, '0')" class="bg-[#111827]">
+                  {{ String(m-1).padStart(2, '0') }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <!-- Quick Shortcuts -->
@@ -478,6 +505,8 @@ watch(() => page.url, () => {
   mobileSidebarOpen.value = false;
 });
 
+let timePollInterval = null;
+
 onMounted(() => {
   if (page.props.app?.current_time) {
     serverTime.value = new Date(page.props.app.current_time);
@@ -486,6 +515,27 @@ onMounted(() => {
   timer = setInterval(() => {
     serverTime.value = new Date(serverTime.value.getTime() + 1000);
   }, 1000);
+
+  // Poll simulated time if in local/dev environment
+  if (page.props.app?.is_local_env) {
+    timePollInterval = setInterval(async () => {
+      try {
+        const response = await fetch('/dev/time/current');
+        if (response.ok) {
+          const data = await response.json();
+          const newTime = new Date(data.current_time.replace(' ', 'T'));
+          const diff = Math.abs(serverTime.value.getTime() - newTime.getTime());
+          
+          if (diff > 5000 || page.props.app?.is_mock_time !== data.is_mock_time) {
+            serverTime.value = newTime;
+            router.reload({ preserveScroll: true });
+          }
+        }
+      } catch (e) {
+        // Catch network errors silently during dev server restarts
+      }
+    }, 2000);
+  }
 
   // Load minimized state from storage
   const stored = localStorage.getItem('sidebar-minimized');
@@ -501,6 +551,7 @@ const toggleSidebar = () => {
 
 onUnmounted(() => {
   if (timer) clearInterval(timer);
+  if (timePollInterval) clearInterval(timePollInterval);
 });
 
 const serverTimeString = computed(() => {
@@ -546,6 +597,9 @@ const userInitial = computed(() => {
 
 
 const showDevTimeModal = ref(false);
+const pickerDate = ref('');
+const pickerHour = ref('00');
+const pickerMinute = ref('00');
 const localDateTimeString = ref('');
 const devTimeForm = useForm({
   target_time: '',
@@ -558,9 +612,12 @@ const minDateTimeString = computed(() => {
 });
 
 const openDevTimeModal = () => {
-  // Format current simulated server time to fit datetime-local input (YYYY-MM-DDTHH:mm)
-  const now = new Date(serverTime.value.getTime() - serverTime.value.getTimezoneOffset() * 60000);
-  localDateTimeString.value = now.toISOString().slice(0, 16);
+  const d = new Date(serverTime.value.getTime() - serverTime.value.getTimezoneOffset() * 60000);
+  const isoStr = d.toISOString();
+  pickerDate.value = isoStr.slice(0, 10);
+  pickerHour.value = isoStr.slice(11, 13);
+  pickerMinute.value = isoStr.slice(14, 16);
+  localDateTimeString.value = isoStr.slice(0, 16);
   showDevTimeModal.value = true;
 };
 
@@ -583,11 +640,15 @@ const setQuickTime = (type) => {
     d.setHours(8, 0, 0);
   }
   const tzOffset = d.getTimezoneOffset() * 60000;
-  localDateTimeString.value = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+  const isoStr = new Date(d.getTime() - tzOffset).toISOString();
+  pickerDate.value = isoStr.slice(0, 10);
+  pickerHour.value = isoStr.slice(11, 13);
+  pickerMinute.value = isoStr.slice(14, 16);
+  localDateTimeString.value = isoStr.slice(0, 16);
 };
 
 const submitDevTime = () => {
-  const formatted = localDateTimeString.value.replace('T', ' ') + ':00';
+  const formatted = `${pickerDate.value} ${pickerHour.value}:${pickerMinute.value}:00`;
   devTimeForm.target_time = formatted;
   devTimeForm.post('/dev/time/update', {
     onSuccess: () => {

@@ -222,5 +222,11 @@ if (app()->environment(['local', 'development'])) {
     Route::post('/dev/time/update', [\App\Http\Controllers\DevTimeController::class, 'update'])->name('dev.time.update');
     Route::post('/dev/time/reset', [\App\Http\Controllers\DevTimeController::class, 'reset'])->name('dev.time.reset');
     Route::post('/dev/kbm-session/{id}/bypass-scan', [\App\Http\Controllers\DevTimeController::class, 'bypassScan'])->name('dev.kbm-session.bypass-scan');
+    Route::get('/dev/time/current', function() {
+        return response()->json([
+            'current_time' => now()->toDateTimeString(),
+            'is_mock_time' => \Illuminate\Support\Facades\Cache::has('time_offset'),
+        ]);
+    })->name('dev.time.current');
 }
 
