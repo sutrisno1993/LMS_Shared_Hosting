@@ -105,10 +105,32 @@ class SiswaController extends Controller
             ];
         })->values();
 
+        // Cek apakah ada Ujian Live aktif untuk sesi kelas hari ini
+        $activeLiveExam = null;
+        $activeSession = collect($jadwalRaw)->firstWhere('status_sesi', 'AKTIF');
+        if (!$activeSession && $siswa && $siswa->id_kelas) {
+            // Fallback: Cari sesi aktif kelas ini tanpa membatasi tanggal hari ini (berguna saat simulasi/mock time)
+            $activeSession = \App\Models\KbmSession::where('id_kelas', $siswa->id_kelas)
+                ->where('status_sesi', 'AKTIF')
+                ->first();
+        }
+        if ($activeSession) {
+            $activeLiveExam = \App\Models\LiveExam::with('questionBank')
+                ->where('id_kbm_session', $activeSession->id)
+                ->where('status', 'ACTIVE')
+                ->first();
+        }
+
         return Inertia::render('Siswa/Dashboard', [
             'siswa' => $siswa,
             'kelas' => $siswa->clas->nama_kelas ?? 'Unknown',
             'jadwal' => $formattedJadwal,
+            'activeLiveExam' => $activeLiveExam ? [
+                'id_exam' => $activeLiveExam->id_exam,
+                'judul' => $activeLiveExam->questionBank->judul ?? 'Asesmen Live',
+                'tujuan' => $activeLiveExam->tujuan,
+                'durasi' => $activeLiveExam->durasi,
+            ] : null,
         ]);
     }
 
@@ -205,8 +227,8 @@ class SiswaController extends Controller
 
         // Cari sesi KBM siswa hari ini yang sedang AKTIF
         $activeSession = \App\Models\KbmSession::where('id_kelas', $siswa->id_kelas)
-            ->where('tanggal', $today)
             ->where('status_sesi', 'AKTIF')
+            ->orderBy('tanggal', 'desc')
             ->first();
 
         if (!$activeSession) {
@@ -215,8 +237,13 @@ class SiswaController extends Controller
 
         // Cari Ujian yang dilaunching ke sesi ini
         $exam = \App\Models\LiveExam::with(['questionBank.questions' => function($q) {
-            // Kita sembunyikan jawaban_benar saat dikirim ke frontend!
-            $q->select('id_question', 'id_bank', 'pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e');
+            // Sembunyikan jawaban_benar saat dikirim ke frontend siswa!
+            $q->select(
+                'id_question', 'id_bank', 'pertanyaan',
+                'gambar_pertanyaan',
+                'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e',
+                'gambar_opsi_a', 'gambar_opsi_b', 'gambar_opsi_c', 'gambar_opsi_d', 'gambar_opsi_e'
+            );
         }])
         ->where('id_kbm_session', $activeSession->id)
         ->where('status', 'ACTIVE')
@@ -226,14 +253,48 @@ class SiswaController extends Controller
             return response()->json(['exam' => null, 'message' => 'Tidak ada asesmen aktif saat ini.']);
         }
 
+        // ======= LOGIKA ACAK + LIMIT SOAL PER SISWA =======
+        $allQuestions = $exam->questionBank->questions->values()->toArray();
+
+        if ($exam->acak_soal) {
+            // Gunakan seed deterministik: kombinasi id_exam + id_siswa sehingga per siswa unik
+            // tapi tetap konsisten jika siswa refresh
+            $seed = crc32($exam->id_exam . '_' . $siswa->id_siswa);
+            // Buat array indeks acak menggunakan seed
+            $indices = range(0, count($allQuestions) - 1);
+            srand($seed);
+            shuffle($indices);
+            srand(); // Reset seed
+
+            $shuffled = [];
+            foreach ($indices as $i) {
+                $shuffled[] = $allQuestions[$i];
+            }
+            $allQuestions = $shuffled;
+        }
+
+        // Batasi jumlah soal jika limit_soal di-set
+        if ($exam->limit_soal && $exam->limit_soal < count($allQuestions)) {
+            $allQuestions = array_slice($allQuestions, 0, $exam->limit_soal);
+        }
+
+        // ======= HITUNG SISA WAKTU =======
+        $secondsElapsed  = $exam->started_at ? now()->diffInSeconds($exam->started_at) : 0;
+        $secondsRemaining = max(0, ($exam->durasi * 60) - $secondsElapsed);
+
         // Ambil jawaban siswa yang sudah tersimpan (jika mereka me-refresh halaman)
         $answered = \App\Models\StudentAnswer::where('id_exam', $exam->id_exam)
             ->where('id_siswa', $siswa->id_siswa)
             ->get();
 
+        // Bangun response exam dengan questions yang sudah diacak/dibatasi
+        $examData = $exam->toArray();
+        $examData['question_bank']['questions'] = $allQuestions;
+
         return response()->json([
-            'exam' => $exam,
-            'answered' => $answered->pluck('jawaban_siswa', 'id_question')
+            'exam'              => $examData,
+            'answered'          => $answered->pluck('jawaban_siswa', 'id_question'),
+            'seconds_remaining' => $secondsRemaining,
         ]);
     }
 

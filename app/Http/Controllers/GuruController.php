@@ -133,7 +133,8 @@ class GuruController extends Controller
         $session = \App\Models\KbmSession::with(['clas', 'subject'])->findOrFail($id);
         
         // Ambil bank soal yang relevan untuk mapel ini
-        $questionBanks = \App\Models\QuestionBank::where('id_guru', $user->id_guru)
+        $questionBanks = \App\Models\QuestionBank::withCount('questions')
+            ->where('id_guru', $user->id_guru)
             ->where('id_mapel', $session->id_mapel)
             ->get();
 

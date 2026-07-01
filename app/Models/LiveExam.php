@@ -10,7 +10,16 @@ class LiveExam extends Model
     use HasFactory;
 
     protected $primaryKey = 'id_exam';
-    protected $fillable = ['id_kbm_session', 'id_bank', 'status'];
+    protected $fillable = [
+        'id_kbm_session', 'id_bank', 'status',
+        'durasi', 'limit_soal', 'acak_soal', 'tujuan',
+        'id_tp', 'id_topic', 'started_at'
+    ];
+
+    protected $casts = [
+        'acak_soal'  => 'boolean',
+        'started_at' => 'datetime',
+    ];
 
     public function kbmSession()
     {
@@ -25,5 +34,15 @@ class LiveExam extends Model
     public function studentAnswers()
     {
         return $this->hasMany(StudentAnswer::class, 'id_exam', 'id_exam');
+    }
+
+    public function learningObjective()
+    {
+        return $this->belongsTo(LearningObjective::class, 'id_tp', 'id_tp');
+    }
+
+    public function learningTopic()
+    {
+        return $this->belongsTo(LearningTopic::class, 'id_topic', 'id_topic');
     }
 }

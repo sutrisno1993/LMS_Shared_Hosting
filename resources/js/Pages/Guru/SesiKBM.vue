@@ -134,25 +134,139 @@
             <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl">🚀</div>
             <div>
               <h3 class="font-bold text-white text-sm">Luncurkan Ujian Live</h3>
-              <p class="text-[10px] text-indigo-300">Pilih paket soal untuk dikirim ke HP siswa saat ini juga.</p>
+              <p class="text-[10px] text-indigo-300">Pilih paket soal, atur pra-ujian, lalu kirim ke HP siswa.</p>
             </div>
           </div>
 
-          <form @submit.prevent="launchExam" v-if="questionBanks && questionBanks.length > 0">
-            <select v-model="selectedBankId" required class="w-full bg-black/50 border border-indigo-500/30 rounded-xl px-3 py-2.5 text-xs text-white mb-3 outline-none focus:border-indigo-400">
+          <div v-if="questionBanks && questionBanks.length > 0" class="space-y-3">
+            <select v-model="selectedBankId" required @change="onBankChange" class="w-full bg-black/50 border border-indigo-500/30 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-400">
               <option value="" disabled>Pilih Paket Soal...</option>
-              <option v-for="bank in questionBanks" :key="bank.id_bank" :value="bank.id_bank">{{ bank.judul }}</option>
+              <option v-for="bank in questionBanks" :key="bank.id_bank" :value="bank.id_bank">{{ bank.judul }} ({{ bank.questions_count ?? '?' }} butir)</option>
             </select>
-            <button type="submit" class="w-full py-2.5 rounded-xl font-bold text-xs text-white transition-all bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/20">
-              Mulai Ujian Sekarang
+            <button @click="showPreExamModal = true" :disabled="!selectedBankId" class="w-full py-2.5 rounded-xl font-bold text-xs text-white transition-all bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed">
+              ⚙️ Atur & Mulai Ujian
             </button>
-          </form>
+          </div>
 
           <div v-else class="text-xs text-slate-400 bg-white/5 p-3 rounded-xl border border-white/10 text-center">
             Anda belum memiliki bank soal untuk mapel ini. 
             <a href="/guru/bank-soal/create" class="text-indigo-400 hover:underline block mt-1">Buat Paket Soal</a>
           </div>
         </div>
+
+        <!-- ===================== MODAL PRA-UJIAN ===================== -->
+        <Teleport to="body">
+          <div v-if="showPreExamModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);">
+            <div class="w-full max-w-lg rounded-2xl border border-white/10 p-6 space-y-5 overflow-y-auto max-h-[90vh]" style="background: #0f1623;">
+              <!-- Header -->
+              <div class="flex items-center justify-between">
+                <h2 class="text-base font-black text-white">⚙️ Pengaturan Ujian Live</h2>
+                <button @click="showPreExamModal = false" class="text-slate-500 hover:text-white text-xl leading-none">✕</button>
+              </div>
+
+              <form @submit.prevent="launchExam" class="space-y-4">
+
+                <!-- Durasi -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-400 mb-1">⏱ Durasi Ujian (Menit)</label>
+                  <div class="flex items-center gap-2">
+                    <input type="range" v-model="examSettings.durasi" min="5" max="120" step="5" class="flex-1 accent-indigo-500">
+                    <span class="text-indigo-400 font-black text-sm w-12 text-center">{{ examSettings.durasi }}'</span>
+                  </div>
+                  <p class="text-[10px] text-slate-500 mt-1">Siswa tidak bisa menjawab setelah waktu habis.</p>
+                </div>
+
+                <hr class="border-white/5">
+
+                <!-- Limit Soal -->
+                <div>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="examSettings.useLimitSoal" class="w-4 h-4 rounded accent-indigo-500">
+                    <span class="text-xs font-bold text-slate-300">Batasi jumlah soal yang ditampilkan</span>
+                  </label>
+                  <div v-if="examSettings.useLimitSoal" class="mt-2 flex items-center gap-3">
+                    <input type="number" v-model="examSettings.limit_soal" :max="selectedBankQuestionCount" min="1"
+                      class="w-24 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-indigo-500">
+                    <span class="text-xs text-slate-500">dari {{ selectedBankQuestionCount }} soal tersedia</span>
+                  </div>
+                </div>
+
+                <!-- Acak Soal -->
+                <div>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="examSettings.acak_soal" class="w-4 h-4 rounded accent-indigo-500">
+                    <span class="text-xs font-bold text-slate-300">Acak urutan soal untuk setiap siswa</span>
+                  </label>
+                  <p class="text-[10px] text-slate-500 mt-0.5 ml-6">Setiap siswa akan menerima urutan soal yang berbeda.</p>
+                </div>
+
+                <hr class="border-white/5">
+
+                <!-- Jenis Asesmen -->
+                <div>
+                  <label class="block text-xs font-bold text-slate-400 mb-2">🎯 Jenis Asesmen</label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button type="button" @click="examSettings.tujuan = 'DIAGNOSTIK'"
+                      :class="examSettings.tujuan === 'DIAGNOSTIK' ? 'border-sky-500 bg-sky-500/15 text-sky-300' : 'border-white/10 bg-white/5 text-slate-400'"
+                      class="py-3 px-4 rounded-xl border text-xs font-bold transition-all text-left">
+                      🔬 Asesmen Diagnostik
+                      <div class="text-[10px] font-normal opacity-70 mt-0.5">Ada laporan, tidak masuk nilai</div>
+                    </button>
+                    <button type="button" @click="examSettings.tujuan = 'SUMATIF'; loadTpList()"
+                      :class="examSettings.tujuan === 'SUMATIF' ? 'border-green-500 bg-green-500/15 text-green-300' : 'border-white/10 bg-white/5 text-slate-400'"
+                      class="py-3 px-4 rounded-xl border text-xs font-bold transition-all text-left">
+                      📊 Asesmen Sumatif
+                      <div class="text-[10px] font-normal opacity-70 mt-0.5">Masuk ke nilai resmi Bab</div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Info Diagnostik -->
+                <div v-if="examSettings.tujuan === 'DIAGNOSTIK'" class="p-3 rounded-xl border border-sky-500/20 bg-sky-500/5">
+                  <p class="text-[11px] text-sky-400">ℹ️ Hasil asesmen diagnostik akan tersimpan dan bisa dilihat di <strong>Laporan Diagnostik</strong>, namun <strong>tidak dihitung</strong> ke dalam nilai sumatif maupun rapor siswa.</p>
+                </div>
+
+                <!-- Pilih Bab & Topik (muncul jika SUMATIF) -->
+                <div v-if="examSettings.tujuan === 'SUMATIF'" class="space-y-3 p-4 rounded-xl border border-green-500/20 bg-green-500/5">
+                  <p class="text-[10px] text-green-400 font-bold">Nilai akan otomatis masuk ke Bab dan Topik Penilaian yang Anda pilih.</p>
+
+                  <!-- Pilih Bab (TP) -->
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Bab / Tujuan Pembelajaran (TP)</label>
+                    <select v-model="examSettings.id_tp" @change="onTpChange" class="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-green-500">
+                      <option value="" disabled>Pilih Bab...</option>
+                      <option v-for="tp in tpList" :key="tp.id_tp" :value="tp.id_tp">{{ tp.kode_tp }} — {{ tp.deskripsi_tp }}</option>
+                    </select>
+                  </div>
+
+                  <!-- Pilih Topik Penilaian -->
+                  <div v-if="examSettings.id_tp">
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Topik / Judul Penilaian</label>
+                    <select v-model="examSettings.id_topic" class="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-green-500 mb-2">
+                      <option value="">— Pilih Topik Lama —</option>
+                      <option v-for="t in selectedTpTopics" :key="t.id_topic" :value="t.id_topic">{{ t.nama_topik }}</option>
+                    </select>
+                    <div v-if="!examSettings.id_topic" class="flex gap-2 items-center">
+                      <input type="text" v-model="examSettings.nama_topik_baru" placeholder="Atau ketik nama topik baru (misal: UH 2)..."
+                        class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-green-500">
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-1">Jika Topik belum ada, ketik nama baru. Sistem akan membuatnya otomatis.</p>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-3 pt-2">
+                  <button type="button" @click="showPreExamModal = false" class="flex-1 py-2.5 rounded-xl text-xs font-bold border border-white/10 text-slate-400 hover:text-white hover:border-white/20 transition-colors">
+                    Batal
+                  </button>
+                  <button type="submit" class="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20">
+                    🚀 Luncurkan Ujian
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </Teleport>
 
       </div>
 
@@ -310,11 +424,60 @@ const isSaving = ref(false);
 const materiLog = ref(props.session?.materi_log || '');
 
 const selectedBankId = ref('');
+const showPreExamModal = ref(false);
+const tpList = ref([]);
+const selectedTpTopics = ref([]);
+
+const examSettings = ref({
+  durasi: 30,
+  useLimitSoal: false,
+  limit_soal: 10,
+  acak_soal: true,
+  tujuan: 'DIAGNOSTIK',
+  id_tp: '',
+  id_topic: '',
+  nama_topik_baru: '',
+});
+
+const selectedBankQuestionCount = computed(() => {
+  const bank = props.questionBanks?.find(b => b.id_bank === selectedBankId.value);
+  return bank?.questions_count ?? 0;
+});
+
+const onBankChange = () => {
+  examSettings.value.limit_soal = selectedBankQuestionCount.value || 10;
+};
+
+const loadTpList = async () => {
+  if (tpList.value.length > 0) return;
+  try {
+    const res = await fetch(`/guru/live-exam/tp-list?id_kbm_session=${props.sessionId}`);
+    const data = await res.json();
+    tpList.value = data.tps || [];
+  } catch (e) {
+    console.error('Gagal load TP list', e);
+  }
+};
+
+const onTpChange = () => {
+  examSettings.value.id_topic = '';
+  examSettings.value.nama_topik_baru = '';
+  const tp = tpList.value.find(t => t.id_tp === examSettings.value.id_tp);
+  selectedTpTopics.value = tp?.topics || [];
+};
+
 const launchExam = () => {
   if (!selectedBankId.value) return;
   router.post(`/guru/live-exam/launch`, {
     id_bank: selectedBankId.value,
-    id_kbm_session: props.sessionId
+    id_kbm_session: props.sessionId,
+    durasi: examSettings.value.durasi,
+    limit_soal: examSettings.value.useLimitSoal ? examSettings.value.limit_soal : null,
+    acak_soal: examSettings.value.acak_soal,
+    tujuan: examSettings.value.tujuan,
+    id_tp: examSettings.value.tujuan === 'SUMATIF' ? examSettings.value.id_tp : null,
+    id_topic: examSettings.value.id_topic || null,
+    nama_topik_baru: !examSettings.value.id_topic ? examSettings.value.nama_topik_baru : null,
   });
 };
 

@@ -14,4 +14,16 @@ class Clas extends Model
     {
         return $this->belongsTo(Teacher::class, 'id_guru_wali', 'id_guru');
     }
+
+    public function students()
+    {
+        return $this->hasMany(Student::class, 'id_kelas', 'id_kelas');
+    }
+
+    // Alias agar bisa dipanggil dengan ->siswa juga
+    public function siswa()
+    {
+        return $this->hasMany(Student::class, 'id_kelas', 'id_kelas');
+    }
 }
+

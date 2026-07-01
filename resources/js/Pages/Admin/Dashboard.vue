@@ -127,6 +127,82 @@
       </div>
     </div>
 
+    <!-- MONITORING KUALITAS KBM & ASESMEN (TP & NILAI KOSONG) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-7">
+      
+      <!-- Kolom 1: Belum Buat Pemetaan TP -->
+      <div class="rounded-2xl border border-white/8 overflow-hidden flex flex-col" style="background: var(--card)">
+        <div class="px-5 py-4 border-b border-white/8 bg-amber-500/5">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-bold text-sm text-white flex items-center gap-1.5">
+                <span>⚠️</span> Mengajar Tanpa Pemetaan Materi
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">Sudah dijadwalkan mengajar tapi belum mendaftarkan Tujuan Pembelajaran (TP)</div>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
+              {{ no_tp_mapping.length }} Guru
+            </span>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto max-h-80 divide-y divide-white/5">
+          <div v-for="g in no_tp_mapping" :key="g.nama_guru + '_' + g.nama_kelas" class="p-4 flex items-center justify-between hover:bg-white/2 transition-colors">
+            <div class="min-w-0 pr-4">
+              <div class="text-sm font-bold text-white truncate">{{ g.nama_guru }}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Kelas {{ g.nama_kelas }} · Mapel: {{ g.nama_mapel }}</div>
+            </div>
+            <a v-if="g.no_wa"
+               :href="`https://wa.me/${g.no_wa}?text=Halo%20Bapak/Ibu%20${encodeURIComponent(g.nama_guru)},%20mohon%20segera%20mengisi%20Pemetaan%20Materi%20(Tujuan%20Pembelajaran/TP)%20untuk%20mata%20pelajaran%20${encodeURIComponent(g.nama_mapel)}%20di%20kelas%20${encodeURIComponent(g.nama_kelas)}%20pada%20sistem%20LMS%2011%20Maret.%20Terima%20kasih.`"
+               target="_blank"
+               class="px-2.5 py-1.5 bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 text-center shrink-0">
+              💬 Tegur (WA)
+            </a>
+          </div>
+          <div v-if="no_tp_mapping.length === 0" class="py-12 text-center text-xs text-slate-500">
+            🎉 Semua pengajar telah membuat pemetaan materi (TP).
+          </div>
+        </div>
+      </div>
+
+      <!-- Kolom 2: Belum Asesmen (Nilai Kosong) -->
+      <div class="rounded-2xl border border-white/8 overflow-hidden flex flex-col" style="background: var(--card)">
+        <div class="px-5 py-4 border-b border-white/8 bg-red-500/5">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-bold text-sm text-white flex items-center gap-1.5">
+                <span>📊</span> Materi Ada, Nilai Masih Kosong
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">Sudah memetakan TP materi tapi belum pernah menginput nilai siswa / asesmen</div>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse">
+              {{ empty_grades.length }} TP
+            </span>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto max-h-80 divide-y divide-white/5">
+          <div v-for="t in empty_grades" :key="t.nama_guru + '_' + t.deskripsi_tp" class="p-4 flex items-center justify-between hover:bg-white/2 transition-colors">
+            <div class="min-w-0 pr-4 flex-1">
+              <div class="text-sm font-bold text-white truncate">{{ t.nama_guru }}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">Mapel: {{ t.nama_mapel }} · Kelas: {{ t.nama_kelas }}</div>
+              <div class="text-[10px] text-rose-400/80 truncate mt-1 bg-red-500/5 border border-red-500/10 px-2 py-1 rounded inline-block w-full">
+                📖 TP: {{ t.deskripsi_tp }}
+              </div>
+            </div>
+            <a v-if="t.no_wa"
+               :href="`https://wa.me/${t.no_wa}?text=Halo%20Bapak/Ibu%20${encodeURIComponent(t.nama_guru)},%20kami%20melihat%20materi%20${encodeURIComponent(t.deskripsi_tp)}%20sudah%20dibuatkan%20pemetaannya,%20tetapi%20nilai%20asesmen%20siswa%20masih%20kosong.%20Mohon%20segera%20melaksanakan%20asesmen%20atau%20menginput%20nilai%20pada%20sistem%20LMS%2011%20Maret.%20Terima%20kasih.`"
+               target="_blank"
+               class="px-2.5 py-1.5 bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 text-center shrink-0">
+              💬 Tegur (WA)
+            </a>
+          </div>
+          <div v-if="empty_grades.length === 0" class="py-12 text-center text-xs text-slate-500">
+            🎉 Semua TP yang dipetakan sudah memiliki nilai asesmen.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- PERFORMA TABLE -->
     <div class="rounded-2xl border border-white/8 overflow-hidden" style="background: var(--card)">
       <div class="flex items-center justify-between px-5 py-4 border-b border-white/8">
@@ -297,7 +373,9 @@ const props = defineProps({
   chartDays: Array,
   progressBars: Array,
   guruPerforma: Array,
-  classes: Array
+  classes: Array,
+  no_tp_mapping: Array,
+  empty_grades: Array,
 });
 
 const page = usePage();

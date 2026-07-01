@@ -123,6 +123,50 @@ class AdminController extends Controller
 
         $classes = \App\Models\Clas::orderBy('nama_kelas')->get();
 
+        // -------------------------------------------------------------
+        // 4. MONITORING KUALITAS KBM & ASESMEN GURU (BARU)
+        // -------------------------------------------------------------
+        
+        // A. Guru yang mengajar mapel di kelas, tapi BELUM membuat Pemetaan Pembelajaran (Tujuan Pembelajaran/TP)
+        $noTpMapping = \App\Models\ClassSubject::with(['clas', 'subject', 'guruMutlak'])
+            ->whereNotNull('id_guru_mutlak')
+            ->get()
+            ->filter(function ($cs) {
+                // Cek apakah guru ini sudah membuat TP untuk mapel & kelas terkait
+                $hasTp = \App\Models\LearningObjective::where('id_guru', $cs->id_guru_mutlak)
+                    ->where('id_mapel', $cs->id_mapel)
+                    ->whereHas('classes', function($q) use ($cs) {
+                        $q->where('classes.id_kelas', $cs->id_kelas);
+                    })->exists();
+                return !$hasTp;
+            })
+            ->map(function ($cs) {
+                return [
+                    'nama_guru' => $cs->guruMutlak->nama_guru ?? 'Unknown',
+                    'nama_kelas' => $cs->clas->nama_kelas ?? '—',
+                    'nama_mapel' => $cs->subject->nama_mapel ?? '—',
+                    'no_wa' => $cs->guruMutlak->no_wa ?? null,
+                ];
+            })->values()->toArray();
+
+        // B. Guru yang SUDAH membuat Pemetaan Pembelajaran (TP), tapi Nilai Siswa (StudentGrade) masih KOSONG (Belum Asesmen)
+        $emptyGrades = \App\Models\LearningObjective::with(['teacher', 'subject', 'classes'])
+            ->get()
+            ->filter(function ($tp) {
+                // Cari apakah ada nilai siswa yang diinputkan untuk TP ini
+                $hasGrade = \App\Models\StudentGrade::where('id_tp', $tp->id_tp)->exists();
+                return !$hasGrade;
+            })
+            ->map(function ($tp) {
+                return [
+                    'nama_guru' => $tp->teacher->nama_guru ?? 'Unknown',
+                    'nama_kelas' => $tp->classes->pluck('nama_kelas')->implode(', ') ?: '—',
+                    'nama_mapel' => $tp->subject->nama_mapel ?? '—',
+                    'deskripsi_tp' => $tp->deskripsi_tp,
+                    'no_wa' => $tp->teacher->no_wa ?? null,
+                ];
+            })->values()->toArray();
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'live_kbm' => $liveKbm,
@@ -130,7 +174,9 @@ class AdminController extends Controller
             'progressBars' => $progressBars,
             'guruPerforma' => $guruPerforma,
             'tanggal_hari_ini' => \Carbon\Carbon::today()->translatedFormat('l, d F Y'),
-            'classes' => $classes
+            'classes' => $classes,
+            'no_tp_mapping' => $noTpMapping,
+            'empty_grades' => $emptyGrades,
         ]);
     }
 
@@ -1094,6 +1140,52 @@ class AdminController extends Controller
         return Inertia::render('Admin/KehadiranGuru', [
             'tanggal' => $tanggal,
             'attendances' => $attendances
+        ]);
+    }
+
+    public function kepatuhanGuru()
+    {
+        // 1. Belum membuat Pemetaan Pembelajaran (TP)
+        $noTpMapping = \App\Models\ClassSubject::with(['clas', 'subject', 'guruMutlak'])
+            ->whereNotNull('id_guru_mutlak')
+            ->get()
+            ->filter(function ($cs) {
+                $hasTp = \App\Models\LearningObjective::where('id_guru', $cs->id_guru_mutlak)
+                    ->where('id_mapel', $cs->id_mapel)
+                    ->whereHas('classes', function($q) use ($cs) {
+                        $q->where('classes.id_kelas', $cs->id_kelas);
+                    })->exists();
+                return !$hasTp;
+            })
+            ->map(function ($cs) {
+                return [
+                    'nama_guru' => $cs->guruMutlak->nama_guru ?? 'Unknown',
+                    'nama_kelas' => $cs->clas->nama_kelas ?? '—',
+                    'nama_mapel' => $cs->subject->nama_mapel ?? '—',
+                    'no_wa' => $cs->guruMutlak->no_wa ?? null,
+                ];
+            })->values()->toArray();
+
+        // 2. Belum melakukan asesmen (nilai kosong)
+        $emptyGrades = \App\Models\LearningObjective::with(['teacher', 'subject', 'classes'])
+            ->get()
+            ->filter(function ($tp) {
+                $hasGrade = \App\Models\StudentGrade::where('id_tp', $tp->id_tp)->exists();
+                return !$hasGrade;
+            })
+            ->map(function ($tp) {
+                return [
+                    'nama_guru' => $tp->teacher->nama_guru ?? 'Unknown',
+                    'nama_kelas' => $tp->classes->pluck('nama_kelas')->implode(', ') ?: '—',
+                    'nama_mapel' => $tp->subject->nama_mapel ?? '—',
+                    'deskripsi_tp' => $tp->deskripsi_tp,
+                    'no_wa' => $tp->teacher->no_wa ?? null,
+                ];
+            })->values()->toArray();
+
+        return Inertia::render('Admin/KepatuhanGuru', [
+            'no_tp_mapping' => $noTpMapping,
+            'empty_grades'  => $emptyGrades,
         ]);
     }
 }

@@ -415,6 +415,7 @@ const resolvedNavigation = computed(() => {
       {
         label: 'Laporan',
         items: [
+          { href: '/admin/kepatuhan-guru', icon: '📋', label: 'Kepatuhan KBM' },
           { href: '/admin/monitoring-nilai', icon: '📈', label: 'Monitoring Nilai' },
           { href: '/admin/rapor', icon: '📋', label: 'Ekspor Rapor' },
           { href: '/admin/laporan-performa', icon: '🏆', label: 'Laporan Performa' },
@@ -473,6 +474,7 @@ const resolvedNavigation = computed(() => {
         label: 'Akademik',
         items: [
           { href: '/siswa/dashboard', icon: '🏠', label: 'Beranda' },
+          { href: '/siswa/ujian-live', icon: '📝', label: 'Ujian Live', badge: 'Asesmen' },
           { href: '/siswa/scan-qr', icon: '📷', label: 'Scan QR Presensi', badge: 'Live' },
           { href: '/siswa/materi', icon: '📁', label: 'Materi Belajar' },
           { href: '/siswa/jadwal', icon: '📅', label: 'Jadwal Kelas' },

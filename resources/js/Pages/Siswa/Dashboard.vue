@@ -85,6 +85,26 @@
       <!-- KANAN: Jadwal & Action -->
       <div class="md:col-span-2 space-y-6">
         
+        <!-- Alert Ujian Live Aktif -->
+        <div v-if="activeLiveExam" class="rounded-2xl border border-rose-500/30 p-5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-rose-500/10 shadow-lg shadow-rose-500/5 animate-pulse">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">📝</span>
+            <div>
+              <div class="flex items-center gap-2">
+                <h4 class="font-black text-white text-sm">ASESMEN SEDANG BERLANGSUNG</h4>
+                <span :class="activeLiveExam.tujuan === 'DIAGNOSTIK' ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-green-500/20 text-green-300 border-green-500/30'"
+                  class="text-[9px] font-extrabold px-2 py-0.5 rounded-full border">
+                  {{ activeLiveExam.tujuan }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-300 font-medium mt-0.5">{{ activeLiveExam.judul }} ({{ activeLiveExam.durasi }} Menit)</p>
+            </div>
+          </div>
+          <a href="/siswa/ujian-live" class="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black transition-all hover:scale-105 shadow-md shadow-rose-500/20 text-center">
+            🚀 Mulai Kerjakan
+          </a>
+        </div>
+
         <!-- Action Utama (Scanner) -->
         <div class="rounded-2xl border border-indigo-500/30 p-1 flex items-center bg-gradient-to-r from-indigo-500/10 to-transparent">
           <div class="p-4 flex-1">
@@ -205,6 +225,7 @@ const props = defineProps({
   siswa: Object,
   kelas: String,
   jadwal: Array,
+  activeLiveExam: Object,
 });
 
 const todayLabel = computed(() =>

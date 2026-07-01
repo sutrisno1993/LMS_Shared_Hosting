@@ -106,6 +106,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/grade-config', [\App\Http\Controllers\AdminConfigController::class, 'gradeConfigUpdate'])->name('grade-config.update');
     Route::get('/rapor', [\App\Http\Controllers\AdminConfigController::class, 'rapor'])->name('rapor');
     Route::get('/monitoring-nilai', [\App\Http\Controllers\AdminController::class, 'monitoringNilai'])->name('monitoring-nilai');
+    Route::get('/kepatuhan-guru', [\App\Http\Controllers\AdminController::class, 'kepatuhanGuru'])->name('kepatuhan-guru');
     Route::get('/laporan-performa', [\App\Http\Controllers\AdminController::class, 'laporanPerforma'])->name('laporan-performa');
     Route::get('/jurnal', [\App\Http\Controllers\AdminController::class, 'jurnalIndex'])->name('jurnal.index');
     Route::get('/laporan-kasus-siswa', [\App\Http\Controllers\AdminController::class, 'laporanKasusSiswa'])->name('laporan-kasus-siswa');
@@ -166,8 +167,10 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('guru')->name('guru.')->grou
     
     // Live Exam
     Route::post('/live-exam/launch', [\App\Http\Controllers\LiveExamController::class, 'launch'])->name('live-exam.launch');
+    Route::get('/live-exam/tp-list', [\App\Http\Controllers\LiveExamController::class, 'tpList'])->name('live-exam.tp-list');
     Route::get('/live-exam/{id}/monitor', [\App\Http\Controllers\LiveExamController::class, 'monitor'])->name('live-exam.monitor');
     Route::post('/live-exam/{id}/close', [\App\Http\Controllers\LiveExamController::class, 'close'])->name('live-exam.close');
+    Route::get('/live-exam/{id}/laporan-diagnostik', [\App\Http\Controllers\LiveExamController::class, 'laporanDiagnostik'])->name('live-exam.laporan-diagnostik');
     Route::post('/kbm/{id_sesi}/ujian', [\App\Http\Controllers\BankSoalController::class, 'launchUjian'])->name('kbm.ujian.launch');
     Route::post('/kbm/ujian/{id}/tutup', [\App\Http\Controllers\BankSoalController::class, 'closeUjian'])->name('kbm.ujian.close');
 

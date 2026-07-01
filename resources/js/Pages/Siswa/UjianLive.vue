@@ -9,9 +9,7 @@
       
       <!-- Jika tidak ada ujian aktif -->
       <div v-if="!exam" class="rounded-2xl border border-white/10 p-10 flex flex-col items-center justify-center text-center space-y-4 shadow-xl" style="background: var(--card)">
-        <div class="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center text-4xl mb-2 animate-bounce">
-          ⏳
-        </div>
+        <div class="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center text-4xl mb-2 animate-bounce">⏳</div>
         <h2 class="text-xl font-black text-white">Belum Ada Ujian</h2>
         <p class="text-sm text-slate-400">Tunggu aba-aba dari Guru untuk memulai ujian. Layar ini akan otomatis menampilkan soal jika ujian diluncurkan.</p>
         <button @click="fetchExam" class="mt-4 px-6 py-2 rounded-full text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 transition-colors">
@@ -22,51 +20,75 @@
       <!-- Lembar Kerja Siswa -->
       <div v-else class="space-y-6">
         
-        <!-- Progress Bar -->
+        <!-- Progress Bar + Timer -->
         <div class="sticky top-0 z-10 pt-4 pb-2 bg-[#0B0F19]/90 backdrop-blur-md">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-bold text-slate-400">Progres Pengerjaan</span>
-            <span class="text-xs font-bold text-indigo-400">{{ answeredCount }} / {{ questions.length }} Terjawab</span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-bold text-indigo-400">{{ answeredCount }} / {{ questions.length }} Terjawab</span>
+              <!-- Countdown Timer -->
+              <div v-if="!isTimeUp && secondsLeft >= 0" :class="[
+                'px-2.5 py-1 rounded-lg font-mono text-xs font-black border',
+                secondsLeft <= 60 ? 'text-red-400 border-red-500/40 bg-red-500/10 animate-pulse' : 'text-green-400 border-green-500/30 bg-green-500/10'
+              ]">
+                ⏱ {{ timerDisplay }}
+              </div>
+              <div v-if="isTimeUp" class="px-2.5 py-1 rounded-lg text-xs font-black text-red-400 border border-red-500/40 bg-red-500/10">
+                ⛔ Waktu Habis
+              </div>
+            </div>
           </div>
           <div class="h-1.5 rounded-full bg-white/10 overflow-hidden">
-            <div class="h-full bg-indigo-500 transition-all duration-300" :style="`width: ${(answeredCount / questions.length) * 100}%`"></div>
+            <div class="h-full bg-indigo-500 transition-all duration-300" :style="`width: ${questions.length ? (answeredCount / questions.length) * 100 : 0}%`"></div>
+          </div>
+          <div v-if="isTimeUp" class="mt-2 text-center text-xs text-red-400 font-bold animate-pulse">
+            ⚠️ Waktu ujian telah habis. Jawaban Anda telah otomatis dikunci.
           </div>
         </div>
 
         <!-- Butir Soal -->
         <div v-for="(q, index) in questions" :key="q.id_question" class="rounded-2xl border border-white/10 p-5 space-y-5" style="background: var(--card)">
+          <!-- Nomor + Pertanyaan -->
           <div class="flex gap-3">
             <div class="flex-shrink-0 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold text-slate-300">
               {{ index + 1 }}
             </div>
-            <div class="pt-1">
+            <div class="pt-1 flex-1">
               <p class="text-sm text-white leading-relaxed">{{ q.pertanyaan }}</p>
-              
-              <!-- Question Image -->
               <div v-if="q.gambar_pertanyaan" class="mt-2">
                 <img :src="q.gambar_pertanyaan" class="max-h-48 rounded-xl object-contain border border-white/5 bg-black/20 p-1">
               </div>
             </div>
           </div>
 
-          <!-- Opsi Jawaban -->
+          <!-- Opsi Jawaban A-E -->
           <div class="pl-11 space-y-2">
-            <label v-for="opt in ['A','B','C','D','E']" :key="opt" 
-                   class="flex flex-col gap-2 p-3 rounded-xl border cursor-pointer transition-all duration-200"
-                   :class="myAnswers[q.id_question] === opt ? 'bg-indigo-500/10 border-indigo-500/50 shadow-[inset_0_0_15px_rgba(79,70,229,0.1)]' : 'bg-black/20 border-white/5 hover:border-white/20 hover:bg-black/40'">
+            <label
+              v-for="opt in ['A','B','C','D','E']" :key="opt"
+              class="flex flex-col gap-2 p-3 rounded-xl border transition-all duration-200"
+              :class="[
+                isTimeUp ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+                myAnswers[q.id_question] === opt
+                  ? 'bg-indigo-500/10 border-indigo-500/50 shadow-[inset_0_0_15px_rgba(79,70,229,0.1)]'
+                  : 'bg-black/20 border-white/5 hover:border-white/20 hover:bg-black/40'
+              ]">
               <div class="flex items-start gap-3">
                 <div class="pt-0.5">
-                  <input type="radio" :name="`q_${q.id_question}`" :value="opt" 
-                         v-model="myAnswers[q.id_question]" 
-                         @change="submitAnswer(q.id_question, opt)"
-                         class="w-4 h-4 text-indigo-500 bg-transparent border-white/20 focus:ring-0 focus:ring-offset-0">
+                  <input type="radio"
+                    :name="`q_${q.id_question}`"
+                    :value="opt"
+                    v-model="myAnswers[q.id_question]"
+                    @change="submitAnswer(q.id_question, opt)"
+                    :disabled="isTimeUp"
+                    class="w-4 h-4 text-indigo-500 bg-transparent border-white/20 focus:ring-0 focus:ring-offset-0">
                 </div>
                 <div class="flex-1 text-sm">
                   <span class="font-bold text-slate-400 mr-2">{{ opt }}.</span>
-                  <span :class="myAnswers[q.id_question] === opt ? 'text-white font-medium' : 'text-slate-300'">{{ q[`opsi_${opt.toLowerCase()}`] }}</span>
+                  <span :class="myAnswers[q.id_question] === opt ? 'text-white font-medium' : 'text-slate-300'">
+                    {{ q[`opsi_${opt.toLowerCase()}`] }}
+                  </span>
                 </div>
               </div>
-
               <!-- Option Image -->
               <div v-if="q[`gambar_opsi_${opt.toLowerCase()}`]" class="ml-7 mt-1">
                 <img :src="q[`gambar_opsi_${opt.toLowerCase()}`]" class="max-h-24 rounded-lg object-contain border border-white/5 bg-black/20 p-1">
@@ -75,14 +97,14 @@
           </div>
         </div>
 
-        <div v-if="answeredCount === questions.length" class="text-center py-8">
+        <!-- Selesai Banner -->
+        <div v-if="answeredCount === questions.length && questions.length > 0" class="text-center py-8">
           <div class="text-4xl mb-4">🎉</div>
           <h3 class="text-lg font-bold text-white mb-2">Semua Soal Terjawab!</h3>
           <p class="text-sm text-slate-400">Silakan koreksi kembali jawaban Anda. Ujian akan tertutup otomatis ketika Guru mengakhirinya.</p>
         </div>
 
       </div>
-
     </div>
   </AppLayout>
 </template>
@@ -93,19 +115,50 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import axios from 'axios';
 
-const exam = ref(null);
-const questions = ref([]);
-const myAnswers = ref({});
+const exam        = ref(null);
+const questions   = ref([]);
+const myAnswers   = ref({});
+const secondsLeft = ref(0);
+const isTimeUp    = ref(false);
 
-let polling;
+let polling, timerInterval;
+
+const timerDisplay = computed(() => {
+  const m = Math.floor(secondsLeft.value / 60);
+  const s = secondsLeft.value % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+});
+
+const startTimer = (secs) => {
+  secondsLeft.value = Math.max(0, secs);
+  if (timerInterval) clearInterval(timerInterval);
+
+  if (secs <= 0) {
+    isTimeUp.value = true;
+    return;
+  }
+
+  timerInterval = setInterval(() => {
+    if (secondsLeft.value > 0) {
+      secondsLeft.value--;
+    } else {
+      clearInterval(timerInterval);
+      isTimeUp.value = true;
+    }
+  }, 1000);
+};
 
 const fetchExam = async () => {
   try {
     const res = await axios.get('/siswa/ujian-live/fetch');
     if (res.data.exam) {
-      exam.value = res.data.exam;
+      exam.value      = res.data.exam;
       questions.value = res.data.exam.question_bank?.questions || [];
       myAnswers.value = res.data.answered || {};
+      // Sinkronkan timer dari server (hanya mulai ulang jika belum time up)
+      if (!isTimeUp.value) {
+        startTimer(res.data.seconds_remaining ?? 0);
+      }
     } else {
       exam.value = null;
     }
@@ -115,14 +168,20 @@ const fetchExam = async () => {
 };
 
 const submitAnswer = async (id_question, jawaban_siswa) => {
+  if (isTimeUp.value) return;
   try {
     await axios.post('/siswa/ujian-live/submit', {
-      id_exam: exam.value.id_exam,
-      id_question: id_question,
-      jawaban_siswa: jawaban_siswa
+      id_exam:       exam.value.id_exam,
+      id_question:   id_question,
+      jawaban_siswa: jawaban_siswa,
     });
   } catch (e) {
-    window.dispatchEvent(new CustomEvent('toast', { detail: { message: e.response?.data?.message || 'Gagal menyimpan jawaban. Cek koneksi Anda.', type: 'error' } }));
+    window.dispatchEvent(new CustomEvent('toast', {
+      detail: {
+        message: e.response?.data?.message || 'Gagal menyimpan jawaban. Cek koneksi Anda.',
+        type: 'error'
+      }
+    }));
   }
 };
 
@@ -130,13 +189,14 @@ const answeredCount = computed(() => Object.keys(myAnswers.value).length);
 
 onMounted(() => {
   fetchExam();
-  // Poll setiap 5 detik untuk cek jika ada ujian baru (jika saat ini null)
+  // Poll setiap 5 detik, hanya untuk mendeteksi ujian baru jika belum ada
   polling = setInterval(() => {
     if (!exam.value) fetchExam();
   }, 5000);
 });
 
 onUnmounted(() => {
-  if (polling) clearInterval(polling);
+  if (polling)       clearInterval(polling);
+  if (timerInterval) clearInterval(timerInterval);
 });
 </script>
