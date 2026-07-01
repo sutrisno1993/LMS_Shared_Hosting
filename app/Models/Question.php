@@ -11,7 +11,13 @@ class Question extends Model
 
     protected $primaryKey = 'id_question';
     protected $fillable = [
-        'id_bank', 'pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e', 'jawaban_benar', 'pembahasan'
+        'id_bank', 'pertanyaan', 'gambar_pertanyaan', 
+        'opsi_a', 'gambar_opsi_a', 
+        'opsi_b', 'gambar_opsi_b', 
+        'opsi_c', 'gambar_opsi_c', 
+        'opsi_d', 'gambar_opsi_d', 
+        'opsi_e', 'gambar_opsi_e', 
+        'jawaban_benar', 'pembahasan'
     ];
 
     public function questionBank()

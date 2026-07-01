@@ -44,6 +44,35 @@ class BankSoalController extends Controller
         ]);
     }
 
+    private function saveBase64Image($base64Str)
+    {
+        if (empty($base64Str)) {
+            return null;
+        }
+
+        // If it's already a saved storage path, return it as is
+        if (str_starts_with($base64Str, '/storage/')) {
+            return $base64Str;
+        }
+
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64Str, $type)) {
+            $data = substr($base64Str, strpos($base64Str, ',') + 1);
+            $data = base64_decode($data);
+            
+            $ext = strtolower($type[1]); // png, jpg, jpeg, gif, webp
+            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                $ext = 'png';
+            }
+            
+            $filename = 'img_' . uniqid() . '_' . time() . '.' . $ext;
+            \Illuminate\Support\Facades\Storage::disk('public')->put('questions/' . $filename, $data);
+            
+            return '/storage/questions/' . $filename;
+        }
+
+        return null;
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -52,11 +81,17 @@ class BankSoalController extends Controller
             'deskripsi' => 'nullable|string',
             'questions' => 'required|array|min:1',
             'questions.*.pertanyaan' => 'required|string',
+            'questions.*.gambar_pertanyaan' => 'nullable|string',
             'questions.*.opsi_a' => 'required|string',
+            'questions.*.gambar_opsi_a' => 'nullable|string',
             'questions.*.opsi_b' => 'required|string',
+            'questions.*.gambar_opsi_b' => 'nullable|string',
             'questions.*.opsi_c' => 'required|string',
+            'questions.*.gambar_opsi_c' => 'nullable|string',
             'questions.*.opsi_d' => 'required|string',
+            'questions.*.gambar_opsi_d' => 'nullable|string',
             'questions.*.opsi_e' => 'required|string',
+            'questions.*.gambar_opsi_e' => 'nullable|string',
             'questions.*.jawaban_benar' => 'required|in:A,B,C,D,E',
         ]);
 
@@ -75,11 +110,17 @@ class BankSoalController extends Controller
             Question::create([
                 'id_bank' => $bank->id_bank,
                 'pertanyaan' => $q['pertanyaan'],
+                'gambar_pertanyaan' => $this->saveBase64Image($q['gambar_pertanyaan'] ?? null),
                 'opsi_a' => $q['opsi_a'],
+                'gambar_opsi_a' => $this->saveBase64Image($q['gambar_opsi_a'] ?? null),
                 'opsi_b' => $q['opsi_b'],
+                'gambar_opsi_b' => $this->saveBase64Image($q['gambar_opsi_b'] ?? null),
                 'opsi_c' => $q['opsi_c'],
+                'gambar_opsi_c' => $this->saveBase64Image($q['gambar_opsi_c'] ?? null),
                 'opsi_d' => $q['opsi_d'],
+                'gambar_opsi_d' => $this->saveBase64Image($q['gambar_opsi_d'] ?? null),
                 'opsi_e' => $q['opsi_e'],
+                'gambar_opsi_e' => $this->saveBase64Image($q['gambar_opsi_e'] ?? null),
                 'jawaban_benar' => $q['jawaban_benar'],
                 'pembahasan' => $q['pembahasan'] ?? null,
             ]);
@@ -129,11 +170,17 @@ class BankSoalController extends Controller
             'deskripsi' => 'nullable|string',
             'questions' => 'required|array|min:1',
             'questions.*.pertanyaan' => 'required|string',
+            'questions.*.gambar_pertanyaan' => 'nullable|string',
             'questions.*.opsi_a' => 'required|string',
+            'questions.*.gambar_opsi_a' => 'nullable|string',
             'questions.*.opsi_b' => 'required|string',
+            'questions.*.gambar_opsi_b' => 'nullable|string',
             'questions.*.opsi_c' => 'required|string',
+            'questions.*.gambar_opsi_c' => 'nullable|string',
             'questions.*.opsi_d' => 'required|string',
+            'questions.*.gambar_opsi_d' => 'nullable|string',
             'questions.*.opsi_e' => 'required|string',
+            'questions.*.gambar_opsi_e' => 'nullable|string',
             'questions.*.jawaban_benar' => 'required|in:A,B,C,D,E',
         ]);
 
@@ -154,11 +201,17 @@ class BankSoalController extends Controller
             Question::create([
                 'id_bank' => $bank->id_bank,
                 'pertanyaan' => $q['pertanyaan'],
+                'gambar_pertanyaan' => $this->saveBase64Image($q['gambar_pertanyaan'] ?? null),
                 'opsi_a' => $q['opsi_a'],
+                'gambar_opsi_a' => $this->saveBase64Image($q['gambar_opsi_a'] ?? null),
                 'opsi_b' => $q['opsi_b'],
+                'gambar_opsi_b' => $this->saveBase64Image($q['gambar_opsi_b'] ?? null),
                 'opsi_c' => $q['opsi_c'],
+                'gambar_opsi_c' => $this->saveBase64Image($q['gambar_opsi_c'] ?? null),
                 'opsi_d' => $q['opsi_d'],
+                'gambar_opsi_d' => $this->saveBase64Image($q['gambar_opsi_d'] ?? null),
                 'opsi_e' => $q['opsi_e'],
+                'gambar_opsi_e' => $this->saveBase64Image($q['gambar_opsi_e'] ?? null),
                 'jawaban_benar' => $q['jawaban_benar'],
                 'pembahasan' => $q['pembahasan'] ?? null,
             ]);

@@ -49,19 +49,31 @@
             <!-- Question text -->
             <p class="text-sm font-semibold text-white whitespace-pre-line leading-relaxed pl-2">{{ q.pertanyaan }}</p>
             
+            <!-- Question Image -->
+            <div v-if="q.gambar_pertanyaan" class="pl-2 mt-2">
+              <img :src="q.gambar_pertanyaan" class="max-h-48 rounded-xl object-contain border border-white/5 bg-black/20 p-1">
+            </div>
+            
             <!-- Options grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-2">
               <div 
                 v-for="opt in ['A','B','C','D','E']" 
                 :key="opt"
-                class="flex items-center gap-3 p-2.5 rounded-xl border transition-all text-xs"
+                class="flex flex-col gap-2 p-3 rounded-xl border transition-all text-xs"
                 :class="q.jawaban_benar === opt 
                   ? 'bg-green-500/10 border-green-500/30 text-green-400 font-bold' 
                   : 'bg-black/20 border-white/5 text-slate-300'"
               >
-                <span class="font-bold">{{ opt }}.</span>
-                <span>{{ q[`opsi_${opt.toLowerCase()}`] }}</span>
-                <span v-if="q.jawaban_benar === opt" class="ml-auto text-green-400">✓ Kunci</span>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold">{{ opt }}.</span>
+                  <span>{{ q[`opsi_${opt.toLowerCase()}`] }}</span>
+                  <span v-if="q.jawaban_benar === opt" class="ml-auto text-green-400">✓ Kunci</span>
+                </div>
+
+                <!-- Option Image -->
+                <div v-if="q[`gambar_opsi_${opt.toLowerCase()}`]" class="mt-1">
+                  <img :src="q[`gambar_opsi_${opt.toLowerCase()}`]" class="max-h-24 rounded-lg object-contain border border-white/5 bg-black/20 p-1">
+                </div>
               </div>
             </div>
 

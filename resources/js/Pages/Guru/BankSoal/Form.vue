@@ -61,17 +61,50 @@
           </button>
 
           <div class="space-y-4">
+            <!-- Input Pertanyaan & Gambar Soal -->
             <div class="space-y-2">
-              <label class="text-xs font-semibold text-slate-400">Pertanyaan</label>
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold text-slate-400">Pertanyaan</label>
+                
+                <label class="text-xs font-bold text-indigo-400 hover:text-indigo-300 cursor-pointer flex items-center gap-1 transition-colors">
+                  <span>🖼️</span> {{ q.gambar_pertanyaan ? 'Ganti Gambar' : 'Tambah Gambar Soal' }}
+                  <input type="file" accept="image/*" class="hidden" @change="e => handleImageUpload(e, q, 'gambar_pertanyaan')">
+                </label>
+              </div>
+              
               <textarea v-model="q.pertanyaan" required rows="3" placeholder="Ketik pertanyaan di sini..." class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+              
+              <!-- Pratinjau Gambar Soal -->
+              <div v-if="q.gambar_pertanyaan" class="relative inline-block mt-2 rounded-xl overflow-hidden border border-white/10 bg-black/40 p-2">
+                <img :src="q.gambar_pertanyaan" class="max-h-36 rounded-lg object-contain max-w-full">
+                <button type="button" @click="removeImage(q, 'gambar_pertanyaan')" class="absolute top-3 right-3 w-6 h-6 rounded-full bg-red-600/90 text-white flex items-center justify-center font-bold text-xs hover:bg-red-700 transition-colors shadow">
+                  ✕
+                </button>
+              </div>
             </div>
 
+            <!-- Opsi Jawaban & Gambar Opsi -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div v-for="opt in ['A','B','C','D','E']" :key="opt" class="flex items-center gap-3">
-                <input type="radio" :name="`correct_${index}`" :value="opt" v-model="q.jawaban_benar" required class="w-4 h-4 text-indigo-600 bg-black/50 border-white/20 focus:ring-indigo-500">
-                <div class="flex-1 flex items-center gap-2">
-                  <span class="text-xs font-bold w-4">{{ opt }}.</span>
-                  <input v-model="q[`opsi_${opt.toLowerCase()}`]" type="text" required :placeholder="`Pilihan ${opt}`" class="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" :class="{'border-green-500/50 bg-green-500/5': q.jawaban_benar === opt}">
+              <div v-for="opt in ['A','B','C','D','E']" :key="opt" class="flex flex-col gap-2 p-3.5 rounded-xl border border-white/5 bg-black/20" :class="{'border-green-500/20 bg-green-500/5': q.jawaban_benar === opt}">
+                <div class="flex items-center gap-3">
+                  <input type="radio" :name="`correct_${index}`" :value="opt" v-model="q.jawaban_benar" required class="w-4 h-4 text-indigo-600 bg-black/50 border-white/20 focus:ring-indigo-500">
+                  <div class="flex-1 flex items-center gap-2">
+                    <span class="text-xs font-bold w-4 text-slate-400">{{ opt }}.</span>
+                    <input v-model="q[`opsi_${opt.toLowerCase()}`]" type="text" required :placeholder="`Pilihan ${opt}`" class="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 border-0">
+                    
+                    <label class="p-2 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer flex items-center justify-center transition-all flex-shrink-0" title="Tambah Gambar Opsi">
+                      <span>🖼️</span>
+                      <input type="file" accept="image/*" class="hidden" @change="e => handleImageUpload(e, q, `gambar_opsi_${opt.toLowerCase()}`)">
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Pratinjau Gambar Opsi -->
+                <div v-if="q[`gambar_opsi_${opt.toLowerCase()}`]" class="relative inline-block self-start ml-7 rounded-lg overflow-hidden border border-white/5 bg-black/40 p-1.5">
+                  <img :src="q[`gambar_opsi_${opt.toLowerCase()}`]" class="max-h-20 rounded object-contain">
+                  <button type="button" @click="removeImage(q, `gambar_opsi_${opt.toLowerCase()}`)" class="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-600/90 text-white flex items-center justify-center font-bold text-[10px] hover:bg-red-700 transition-colors shadow">
+                    ✕
+                  </button>
                 </div>
               </div>
             </div>
@@ -231,9 +264,34 @@ const showImportModal = ref(false);
 const rawImportText = ref('');
 const importError = ref('');
 
+const handleImageUpload = (e, q, field) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Ukuran gambar maksimal adalah 2MB');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    q[field] = event.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const removeImage = (q, field) => {
+  q[field] = '';
+};
+
 const getEmptyQuestion = () => ({
   pertanyaan: '',
-  opsi_a: '', opsi_b: '', opsi_c: '', opsi_d: '', opsi_e: '',
+  gambar_pertanyaan: '',
+  opsi_a: '', gambar_opsi_a: '',
+  opsi_b: '', gambar_opsi_b: '',
+  opsi_c: '', gambar_opsi_c: '',
+  opsi_d: '', gambar_opsi_d: '',
+  opsi_e: '', gambar_opsi_e: '',
   jawaban_benar: 'A',
   pembahasan: ''
 });
@@ -245,11 +303,17 @@ const form = useForm({
   questions: props.questions && props.questions.length > 0
     ? props.questions.map(q => ({
         pertanyaan: q.pertanyaan,
+        gambar_pertanyaan: q.gambar_pertanyaan || '',
         opsi_a: q.opsi_a,
+        gambar_opsi_a: q.gambar_opsi_a || '',
         opsi_b: q.opsi_b,
+        gambar_opsi_b: q.gambar_opsi_b || '',
         opsi_c: q.opsi_c,
+        gambar_opsi_c: q.gambar_opsi_c || '',
         opsi_d: q.opsi_d,
+        gambar_opsi_d: q.gambar_opsi_d || '',
         opsi_e: q.opsi_e,
+        gambar_opsi_e: q.gambar_opsi_e || '',
         jawaban_benar: q.jawaban_benar,
         pembahasan: q.pembahasan || ''
       }))
@@ -258,11 +322,17 @@ const form = useForm({
 
 const sanitizeQuestion = (q) => {
   q.pertanyaan = q.pertanyaan.trim();
+  q.gambar_pertanyaan = q.gambar_pertanyaan || '';
   q.opsi_a = q.opsi_a.trim();
+  q.gambar_opsi_a = q.gambar_opsi_a || '';
   q.opsi_b = q.opsi_b.trim();
+  q.gambar_opsi_b = q.gambar_opsi_b || '';
   q.opsi_c = q.opsi_c.trim();
+  q.gambar_opsi_c = q.gambar_opsi_c || '';
   q.opsi_d = q.opsi_d.trim();
+  q.gambar_opsi_d = q.gambar_opsi_d || '';
   q.opsi_e = q.opsi_e.trim();
+  q.gambar_opsi_e = q.gambar_opsi_e || '';
   return q;
 };
 
