@@ -29,8 +29,18 @@
           <div class="mt-6 relative z-10">
             <h2 class="text-lg font-black tracking-wide">{{ studentData.nama }}</h2>
             <div class="text-sm text-indigo-200 font-mono mt-0.5">{{ studentData.nis }} / {{ studentData.nisn }}</div>
-            <div class="inline-block mt-3 px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-xs font-bold shadow-inner">
-              🏫 {{ studentData.kelas }} — {{ studentData.jurusan }}
+            <div class="flex items-center justify-between mt-3 gap-2">
+              <div class="inline-block px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-xs font-bold shadow-inner truncate">
+                🏫 {{ studentData.kelas }} — {{ studentData.jurusan }}
+              </div>
+              <button 
+                @click="showQrModal = true"
+                type="button"
+                class="flex-shrink-0 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-[10px] font-bold shadow-md transition-colors flex items-center gap-1 border border-emerald-500/20 cursor-pointer text-white"
+                title="Tampilkan QR Code Kartu Pelajar"
+              >
+                <span>📱</span> Tampilkan QR
+              </button>
             </div>
           </div>
         </div>
@@ -146,7 +156,37 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
 
+    <!-- Modal QR Code -->
+    <div v-if="showQrModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <!-- Backdrop -->
+      <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showQrModal = false"></div>
+      
+      <!-- Content -->
+      <div class="relative w-full max-w-sm rounded-2xl border border-white/12 shadow-2xl p-6 overflow-hidden flex flex-col items-center text-center z-10" style="background: var(--card)">
+        <div class="flex items-center justify-between w-full border-b border-white/8 pb-3 mb-4">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <span>📱</span> QR Kartu Pelajar
+          </h3>
+          <button @click="showQrModal = false" class="text-slate-400 hover:text-white transition-colors text-lg font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-white/10 shadow-inner mb-4">
+          <QrcodeVue
+            :value="studentData.nis"
+            :size="200"
+            level="H"
+            render-as="svg"
+          />
+        </div>
+
+        <h4 class="text-base font-black text-white leading-tight mb-1">{{ studentData.nama }}</h4>
+        <p class="text-xs text-indigo-400 font-mono mb-2">NIS: {{ studentData.nis }}</p>
+        <p class="text-[10px] text-slate-500 italic">Tunjukkan QR Code ini ke guru piket untuk mencatat keterlambatan.</p>
       </div>
     </div>
 
@@ -157,6 +197,9 @@
 import { Head } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import QrcodeVue from 'qrcode.vue';
+
+const showQrModal = ref(false);
 
 const props = defineProps({
   siswa: Object,

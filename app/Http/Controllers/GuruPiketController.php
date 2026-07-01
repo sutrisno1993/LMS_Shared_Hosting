@@ -110,13 +110,16 @@ class GuruPiketController extends Controller
                 ];
             });
 
-        // Data Kelas untuk Tab Keliling Kelas
-        $classes = Clas::orderBy('tingkat')->orderBy('nama_kelas')->get()->map(function($c) {
-            return [
-                'id' => $c->id_kelas,
-                'nama_kelas' => $c->nama_kelas
-            ];
-        });
+        // Data Kelas untuk Tab Keliling Kelas (difilter berdasarkan shift piket)
+        $classes = Clas::where('shift_operasional', $shiftPiket)
+            ->orderBy('tingkat')
+            ->orderBy('nama_kelas')
+            ->get()->map(function($c) {
+                return [
+                    'id' => $c->id_kelas,
+                    'nama_kelas' => $c->nama_kelas
+                ];
+            });
 
         return Inertia::render('Guru/TugasPiket', [
             'shift' => $shiftPiket,

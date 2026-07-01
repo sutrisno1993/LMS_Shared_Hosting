@@ -125,15 +125,55 @@
     <div v-show="activeTab === 'SISWA'" class="animate-fade-in space-y-6">
       <!-- Form Input -->
       <div class="bg-[#18181B] border border-white/10 rounded-2xl p-6 shadow-2xl">
-        <h3 class="text-lg font-black text-white mb-4">Catat Siswa Terlambat</h3>
+        
+        <!-- Header & Segment Control / Scan Button -->
+        <div class="flex items-center justify-between mb-5 flex-wrap gap-4 border-b border-white/5 pb-4">
+          <div>
+            <h3 class="text-base font-bold text-white">Catat Siswa Terlambat</h3>
+            <p class="text-xs text-slate-400">Pilih salah satu metode pencarian/pemilihan di bawah ini.</p>
+          </div>
+          
+          <div class="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+            <!-- Segment Control -->
+            <div class="flex bg-white/5 p-1 rounded-xl border border-white/5 flex-shrink-0">
+              <button 
+                type="button"
+                @click="piketPickMode = 'SEARCH'"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                :class="piketPickMode === 'SEARCH' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'"
+              >
+                🔍 Cari Nama/NIS
+              </button>
+              <button 
+                @click="piketPickMode = 'CLASS'"
+                type="button"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                :class="piketPickMode === 'CLASS' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'"
+              >
+                🏫 Pilih per Kelas
+              </button>
+            </div>
+            
+            <!-- Scan QR Button -->
+            <button 
+              @click="openQrScanner"
+              type="button"
+              class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white shadow-lg transition-all hover:scale-105 cursor-pointer border border-emerald-500/20"
+            >
+              <span>📷</span> Scan QR Siswa
+            </button>
+          </div>
+        </div>
+
         <form @submit.prevent="submitSiswaTelat" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div class="col-span-1 md:col-span-1 relative">
+          <!-- Opsi 1: Search Autocomplete -->
+          <div v-if="piketPickMode === 'SEARCH'" class="col-span-1 md:col-span-1 relative">
             <label class="block text-xs font-bold text-slate-400 mb-1">Cari Siswa</label>
             <input 
               v-model="searchQuery" 
               @focus="showDropdown = true"
               placeholder="Ketik Nama / NIS..."
-              class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm"
+              class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm h-[38px]"
             />
             <!-- Dropdown -->
             <div v-if="showDropdown && filteredStudents.length > 0" class="absolute z-50 mt-1 w-[300px] max-h-60 overflow-y-auto bg-[#1a1b2e] border border-white/10 rounded-lg shadow-xl">
@@ -143,12 +183,25 @@
                 @click="selectStudent(s)"
                 class="px-3 py-2 hover:bg-indigo-500/20 cursor-pointer border-b border-white/5 transition-colors"
               >
-                <div class="text-sm font-bold text-white">{{ s.nama }}</div>
-                <div class="text-xs text-indigo-300">{{ s.nis }} - {{ s.kelas }}</div>
+                <div class="text-sm font-bold text-white">{{ s.nama }} <span class="text-xs text-slate-400 font-normal">({{ s.kelas }})</span></div>
+                <div class="text-[11px] text-indigo-300 font-mono">NIS: {{ s.nis }}</div>
               </div>
             </div>
           </div>
           
+          <!-- Opsi 2: Class Picker Dropdown -->
+          <div v-if="piketPickMode === 'CLASS'" class="col-span-1 md:col-span-1">
+            <label class="block text-xs font-bold text-slate-400 mb-1">Pilih Kelas</label>
+            <select 
+              v-model="selectedClassForTelat"
+              class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm h-[38px]"
+            >
+              <option :value="null">-- Pilih Kelas --</option>
+              <option v-for="c in classes" :key="c.id" :value="c.nama_kelas">{{ c.nama_kelas }}</option>
+            </select>
+          </div>
+
+          <!-- Terpilih Display -->
           <div class="col-span-1 md:col-span-1">
             <label class="block text-xs font-bold text-slate-400 mb-1">Terpilih</label>
             <div class="w-full bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-3 py-2 text-indigo-200 text-sm h-[38px] flex items-center overflow-hidden whitespace-nowrap">
@@ -156,15 +209,17 @@
             </div>
           </div>
 
+          <!-- Alasan/Keterangan -->
           <div class="col-span-1 md:col-span-1">
             <label class="block text-xs font-bold text-slate-400 mb-1">Alasan / Keterangan</label>
             <input 
               v-model="formTelat.alasan" 
               placeholder="Contoh: Bangun kesiangan"
-              class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm"
+              class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm h-[38px]"
             />
           </div>
 
+          <!-- Tindakan & Submit -->
           <div class="col-span-1 md:col-span-1 flex gap-2">
             <div class="flex-1">
               <label class="block text-xs font-bold text-slate-400 mb-1">Tindakan</label>
@@ -172,16 +227,35 @@
                 v-model="formTelat.tindakan" 
                 required
                 placeholder="Contoh: Pungut sampah"
-                class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm"
+                class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm h-[38px]"
               />
             </div>
             <button 
               type="submit" 
               :disabled="!formTelat.id_siswa || formTelat.processing"
-              class="h-[38px] px-4 mt-5 rounded-lg font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 transition-colors shadow-lg"
+              class="h-[38px] px-4 rounded-lg font-bold text-sm bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 transition-colors shadow-lg cursor-pointer"
             >
               Catat!
             </button>
+          </div>
+
+          <!-- List nama siswa ketika pick mode 'CLASS' dan kelas sudah dipilih -->
+          <div v-if="piketPickMode === 'CLASS' && selectedClassForTelat" class="col-span-1 md:col-span-4 mt-2">
+            <label class="block text-xs font-bold text-slate-400 mb-1.5">Klik Nama Siswa yang Terlambat:</label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto bg-black/25 p-3 rounded-xl border border-white/5">
+              <button
+                v-for="s in studentsInSelectedClass"
+                :key="s.id"
+                type="button"
+                @click="selectStudent(s)"
+                class="px-3 py-2 text-xs font-semibold rounded-lg border text-left transition-all truncate cursor-pointer"
+                :class="formTelat.id_siswa === s.id 
+                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/25' 
+                  : 'bg-white/5 border-white/8 text-slate-300 hover:bg-white/10 hover:text-white'"
+              >
+                {{ s.nama }}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -299,6 +373,45 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal QR Scanner -->
+    <div v-if="showQrScannerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showQrScannerModal = false"></div>
+      
+      <div class="relative w-full max-w-md rounded-2xl border border-white/12 shadow-2xl p-6 overflow-hidden flex flex-col items-center text-center z-10" style="background: var(--card)">
+        <div class="flex items-center justify-between w-full border-b border-white/8 pb-3 mb-4">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <span>📷</span> Scan QR Kartu Pelajar
+          </h3>
+          <button @click="showQrScannerModal = false" type="button" class="text-slate-400 hover:text-white transition-colors text-lg font-bold">
+            ✕
+          </button>
+        </div>
+
+        <!-- Scanner Box -->
+        <div class="w-full aspect-square rounded-2xl overflow-hidden border-4 border-indigo-500/30 relative bg-black mb-4">
+          <qrcode-stream 
+            v-if="showQrScannerModal && !isQrLoading"
+            @detect="onQrDetect" 
+            @camera-on="onQrCameraOn"
+            @error="onQrError"
+            style="position:absolute;inset:0;width:100%;height:100%;"
+          ></qrcode-stream>
+
+          <div v-if="isQrLoading" class="absolute inset-0 bg-black/75 flex flex-col items-center justify-center">
+            <span class="w-8 h-8 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin mb-3"></span>
+            <span class="text-indigo-400 text-xs font-bold animate-pulse">Menyiapkan Kamera...</span>
+          </div>
+        </div>
+
+        <div v-if="qrError" class="text-xs text-red-400 font-semibold bg-red-500/10 p-2.5 rounded-xl border border-red-500/20 w-full mb-2">
+          {{ qrError }}
+        </div>
+        
+        <p class="text-[10px] text-slate-500">Arahkan kamera ke QR Code Kartu Pelajar Digital pada dashboard siswa.</p>
+      </div>
+    </div>
+
   </AppLayout>
 </template>
 
@@ -306,6 +419,7 @@
 import { ref, computed } from 'vue';
 import { Head, router, usePage, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { QrcodeStream } from 'vue-qrcode-reader';
 
 const props = defineProps({
   shift: String,
@@ -328,6 +442,15 @@ const props = defineProps({
 const page = usePage();
 const activeTab = ref('GURU'); // 'GURU', 'SISWA', 'KELAS'
 
+// Pick modes
+const piketPickMode = ref('SEARCH'); // 'SEARCH', 'CLASS'
+const selectedClassForTelat = ref(null);
+
+const studentsInSelectedClass = computed(() => {
+  if (!selectedClassForTelat.value) return [];
+  return props.students.filter(s => s.kelas === selectedClassForTelat.value);
+});
+
 // Fitur Pencarian Siswa
 const searchQuery = ref('');
 const showDropdown = ref(false);
@@ -340,6 +463,49 @@ const filteredStudents = computed(() => {
     s.nis.toLowerCase().includes(query)
   ).slice(0, 5); // Batasi 5 hasil agar tidak berat
 });
+
+// Fitur QR Code Scanner
+const showQrScannerModal = ref(false);
+const isQrLoading = ref(false);
+const qrError = ref('');
+
+const openQrScanner = () => {
+  showQrScannerModal.value = true;
+  isQrLoading.value = true;
+  qrError.value = '';
+};
+
+const onQrCameraOn = () => {
+  isQrLoading.value = false;
+};
+
+const onQrDetect = (detectedCodes) => {
+  if (detectedCodes.length === 0) return;
+  const rawValue = detectedCodes[0].rawValue;
+  
+  // Find student by NIS
+  const matchedStudent = props.students.find(s => s.nis === rawValue);
+  
+  if (matchedStudent) {
+    selectStudent(matchedStudent);
+    showQrScannerModal.value = false;
+    window.dispatchEvent(new CustomEvent('toast', { detail: { message: `Siswa terdeteksi: ${matchedStudent.nama}!`, type: 'success' } }));
+  } else {
+    qrError.value = `Siswa dengan NIS "${rawValue}" tidak ditemukan.`;
+  }
+};
+
+const onQrError = (error) => {
+  isQrLoading.value = false;
+  qrError.value = 'ERROR: Kamera tidak dapat diakses. Pastikan browser mengizinkan kamera atau akses via HTTPS.';
+  if (error.name === 'NotAllowedError') {
+    qrError.value = 'Akses kamera ditolak oleh pengguna.';
+  } else if (error.name === 'NotFoundError') {
+    qrError.value = 'Tidak ada perangkat kamera ditemukan.';
+  } else {
+    qrError.value = 'Gagal mengakses kamera: ' + error.message;
+  }
+};
 
 const formTelat = useForm({
   id_siswa: null,
