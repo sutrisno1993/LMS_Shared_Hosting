@@ -1,9 +1,9 @@
 <template>
-  <Head title="Buat Bank Soal" />
+  <Head :title="bank ? 'Edit Bank Soal' : 'Buat Bank Soal'" />
 
   <AppLayout
-    title="Buat Bank Soal"
-    subtitle="Ketik soal pilihan ganda dan tentukan kunci jawabannya"
+    :title="bank ? 'Edit Bank Soal' : 'Buat Bank Soal'"
+    :subtitle="bank ? 'Perbarui paket soal pilihan ganda' : 'Ketik soal pilihan ganda dan tentukan kunci jawabannya'"
     :navigation="navigation"
   >
     <form @submit.prevent="submit" class="max-w-4xl mx-auto space-y-6">
@@ -200,7 +200,9 @@ import { ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
-  mapelList: Array
+  mapelList: Array,
+  bank: Object,
+  questions: Array
 });
 
 const navigation = [
@@ -237,10 +239,21 @@ const getEmptyQuestion = () => ({
 });
 
 const form = useForm({
-  id_mapel: '',
-  judul: '',
-  deskripsi: '',
-  questions: [getEmptyQuestion()]
+  id_mapel: props.bank?.id_mapel || '',
+  judul: props.bank?.judul || '',
+  deskripsi: props.bank?.deskripsi || '',
+  questions: props.questions && props.questions.length > 0
+    ? props.questions.map(q => ({
+        pertanyaan: q.pertanyaan,
+        opsi_a: q.opsi_a,
+        opsi_b: q.opsi_b,
+        opsi_c: q.opsi_c,
+        opsi_d: q.opsi_d,
+        opsi_e: q.opsi_e,
+        jawaban_benar: q.jawaban_benar,
+        pembahasan: q.pembahasan || ''
+      }))
+    : [getEmptyQuestion()]
 });
 
 const sanitizeQuestion = (q) => {
@@ -366,8 +379,14 @@ const removeQuestion = (index) => {
 };
 
 const submit = () => {
-  form.post('/guru/bank-soal', {
-    preserveScroll: true,
-  });
+  if (props.bank) {
+    form.put(`/guru/bank-soal/${props.bank.id_bank}`, {
+      preserveScroll: true,
+    });
+  } else {
+    form.post('/guru/bank-soal', {
+      preserveScroll: true,
+    });
+  }
 };
 </script>

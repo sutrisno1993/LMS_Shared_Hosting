@@ -161,6 +161,8 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('guru')->name('guru.')->grou
     Route::post('/bank-soal', [\App\Http\Controllers\BankSoalController::class, 'store'])->name('bank-soal.store');
     Route::post('/bank-soal/{id}/pertanyaan', [\App\Http\Controllers\BankSoalController::class, 'storePertanyaan'])->name('bank-soal.pertanyaan.store');
     Route::get('/bank-soal/{id}', [\App\Http\Controllers\BankSoalController::class, 'show'])->name('bank-soal.show');
+    Route::get('/bank-soal/{id}/edit', [\App\Http\Controllers\BankSoalController::class, 'edit'])->name('bank-soal.edit');
+    Route::put('/bank-soal/{id}', [\App\Http\Controllers\BankSoalController::class, 'update'])->name('bank-soal.update');
     
     // Live Exam
     Route::post('/live-exam/launch', [\App\Http\Controllers\LiveExamController::class, 'launch'])->name('live-exam.launch');

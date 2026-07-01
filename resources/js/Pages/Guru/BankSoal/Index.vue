@@ -18,7 +18,13 @@
 
       <!-- List Bank Soal -->
       <div v-if="banks.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div v-for="bank in banks" :key="bank.id_bank" class="rounded-2xl border border-white/10 p-5 hover:border-indigo-500/50 transition-all cursor-pointer group" style="background: var(--card)">
+        <a 
+          v-for="bank in banks" 
+          :key="bank.id_bank" 
+          :href="`/guru/bank-soal/${bank.id_bank}`"
+          class="rounded-2xl border border-white/10 p-5 hover:border-indigo-500/50 transition-all cursor-pointer group block" 
+          style="background: var(--card)"
+        >
           <div class="flex items-start justify-between mb-4">
             <div class="px-3 py-1 bg-white/5 rounded-lg text-xs font-semibold text-slate-300">
               {{ bank.subject?.nama_mapel || 'Mapel Umum' }}
@@ -35,7 +41,7 @@
             <span class="text-xs font-bold text-indigo-400">{{ bank.questions_count }} Butir Soal</span>
             <span class="text-xs text-slate-500">{{ formatDate(bank.created_at) }}</span>
           </div>
-        </div>
+        </a>
       </div>
 
       <!-- Empty State -->
