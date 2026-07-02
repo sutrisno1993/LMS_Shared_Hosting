@@ -15,12 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
-        $middleware->web(prepend: [
-            \App\Http\Middleware\TenantDatabaseMiddleware::class,
-        ]);
-        $middleware->api(prepend: [
-            \App\Http\Middleware\TenantDatabaseMiddleware::class,
-        ]);
         $middleware->web(append: [
             HandleInertiaRequests::class,
             \App\Http\Middleware\EnsureDailyKbmGenerated::class,
