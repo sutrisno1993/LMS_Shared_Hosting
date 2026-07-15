@@ -281,21 +281,23 @@ class WaliKelasController extends Controller
             ->orderBy('nama_siswa')
             ->get();
 
-        // Ambil semua attendances siswa di kelas ini pada rentang semester
-        $attendances = \App\Models\StudentAttendance::whereIn('id_siswa', $studentsRaw->pluck('id_siswa'))
-            ->whereHas('kbmSession', function($q) use ($startDate, $endDate) {
-                $q->whereBetween('tanggal', [$startDate, $endDate]);
-            })
+        // Ambil semua attendances siswa di kelas ini pada rentang semester (dioptimasi menggunakan GROUP BY)
+        $attendances = \Illuminate\Support\Facades\DB::table('student_attendances')
+            ->join('kbm_sessions', 'student_attendances.id_kbm_session', '=', 'kbm_sessions.id')
+            ->whereIn('student_attendances.id_siswa', $studentsRaw->pluck('id_siswa'))
+            ->whereBetween('kbm_sessions.tanggal', [$startDate, $endDate])
+            ->select('student_attendances.id_siswa', 'student_attendances.status', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('student_attendances.id_siswa', 'student_attendances.status')
             ->get()
             ->groupBy('id_siswa');
 
         $studentsData = $studentsRaw->map(function($siswa) use ($attendances) {
             $studentAtts = $attendances->get($siswa->id_siswa) ?? collect();
-            $hadir = $studentAtts->where('status', 'HADIR')->count();
-            $sakit = $studentAtts->where('status', 'SAKIT')->count();
-            $izin = $studentAtts->where('status', 'IZIN')->count();
-            $alpa = $studentAtts->where('status', 'ALPA')->count();
-            $total = $studentAtts->count();
+            $hadir = $studentAtts->where('status', 'HADIR')->sum('total');
+            $sakit = $studentAtts->where('status', 'SAKIT')->sum('total');
+            $izin = $studentAtts->where('status', 'IZIN')->sum('total');
+            $alpa = $studentAtts->where('status', 'ALPA')->sum('total');
+            $total = $hadir + $sakit + $izin + $alpa;
             $persentase = $total > 0 ? round(($hadir / $total) * 100) : 100;
 
             return [

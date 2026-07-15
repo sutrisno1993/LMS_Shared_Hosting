@@ -61,7 +61,10 @@ class AdminController extends Controller
                 'waktu' => $waktu,
                 'status' => $session->status_guru,
                 'scan_masuk' => $session->waktu_scan_masuk ? $session->waktu_scan_masuk->format('H:i') : '-',
-                'materi_log' => $session->materi_log
+                'materi_log' => $session->materi_log,
+                'foto_selfie' => $session->foto_selfie,
+                'latitude' => $session->latitude,
+                'longitude' => $session->longitude,
             ];
         })->sortBy('jam_ke')->values();
 
@@ -154,7 +157,11 @@ class AdminController extends Controller
             ->get()
             ->filter(function ($tp) {
                 // Cari apakah ada nilai siswa yang diinputkan untuk TP ini
-                $hasGrade = \App\Models\StudentGrade::where('id_tp', $tp->id_tp)->exists();
+                $hasNewGrade = \App\Models\Assessment::whereHas('learningObjectives', function ($query) use ($tp) {
+                    $query->where('assessment_tp.id_tp', $tp->id_tp);
+                })->whereHas('scores')->exists();
+                $hasLegacyGrade = \App\Models\StudentGrade::where('id_tp', $tp->id_tp)->exists();
+                $hasGrade = $hasNewGrade || $hasLegacyGrade;
                 return !$hasGrade;
             })
             ->map(function ($tp) {
@@ -293,7 +300,28 @@ class AdminController extends Controller
             'id_guru_wali' => null
         ]);
 
-        return redirect()->back()->with('success', 'Seluruh penugasan wali kelas berhasil dikosongkan!');
+        return redirect()->back()->with('success', 'Seluruh penugasan wali kelas berhasil direset!');
+    }
+
+    /**
+     * Update konfigurasi CCTV kelas
+     */
+    public function updateClassCctv(Request $request)
+    {
+        $request->validate([
+            'id_kelas' => 'required|exists:classes,id_kelas',
+            'cctv_type' => 'required|in:NONE,STREAM,IFRAME',
+            'cctv_url' => 'nullable|string',
+            'cctv_verification_code' => 'nullable|string|max:100',
+        ]);
+
+        \App\Models\Clas::where('id_kelas', $request->id_kelas)->update([
+            'cctv_type' => $request->cctv_type,
+            'cctv_url' => $request->cctv_url,
+            'cctv_verification_code' => $request->cctv_verification_code,
+        ]);
+
+        return redirect()->back()->with('success', 'Pengaturan CCTV kelas berhasil diperbarui!');
     }
 
     /**
@@ -651,9 +679,14 @@ class AdminController extends Controller
                     $hasReportCard = true;
                 } else {
                     // Fallback: Cek nilai formatif/sumatif berjalan
-                    $studentGrades = \App\Models\StudentGrade::where('id_siswa', $siswa->id_siswa)->get();
-                    if ($studentGrades->count() > 0) {
-                        $avgScore = round($studentGrades->avg('nilai'), 1);
+                    $newGrades = \App\Models\StudentAssessmentScore::where('id_siswa', $siswa->id_siswa)->get();
+                    if ($newGrades->count() > 0) {
+                        $avgScore = round($newGrades->avg('nilai'), 1);
+                    } else {
+                        $studentGrades = \App\Models\StudentGrade::where('id_siswa', $siswa->id_siswa)->get();
+                        if ($studentGrades->count() > 0) {
+                            $avgScore = round($studentGrades->avg('nilai'), 1);
+                        }
                     }
                 }
 
@@ -1170,7 +1203,11 @@ class AdminController extends Controller
         $emptyGrades = \App\Models\LearningObjective::with(['teacher', 'subject', 'classes'])
             ->get()
             ->filter(function ($tp) {
-                $hasGrade = \App\Models\StudentGrade::where('id_tp', $tp->id_tp)->exists();
+                $hasNewGrade = \App\Models\Assessment::whereHas('learningObjectives', function ($query) use ($tp) {
+                    $query->where('assessment_tp.id_tp', $tp->id_tp);
+                })->whereHas('scores')->exists();
+                $hasLegacyGrade = \App\Models\StudentGrade::where('id_tp', $tp->id_tp)->exists();
+                $hasGrade = $hasNewGrade || $hasLegacyGrade;
                 return !$hasGrade;
             })
             ->map(function ($tp) {

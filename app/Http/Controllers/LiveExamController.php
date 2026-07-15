@@ -113,7 +113,7 @@ class LiveExamController extends Controller
         $exam->status = 'FINISHED';
         $exam->save();
 
-        // Jika tujuan SUMATIF dan ada relasi TP + Topik, suntik nilai ke StudentGrade
+        // Jika tujuan SUMATIF dan ada relasi TP, suntik nilai ke tabel Asesmen & Skor baru
         if ($exam->tujuan === 'SUMATIF' && $exam->id_tp) {
             $answers       = StudentAnswer::where('id_exam', $id)->get();
             $totalQuestions = $exam->limit_soal
@@ -121,28 +121,61 @@ class LiveExamController extends Controller
                 : $exam->questionBank->questions->count();
 
             $groupedByStudent = $answers->groupBy('id_siswa');
+            $idBab = \Illuminate\Support\Facades\DB::table('bab_tp')
+                ->where('id_tp', $exam->id_tp)
+                ->value('id_bab');
 
-            foreach ($groupedByStudent as $idSiswa => $siswaAnswers) {
-                $correctCount = $siswaAnswers->where('is_correct', true)->count();
-                $score = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100) : 0;
-
-                // Simpan nilai dengan mengikat id_tp dan id_topic (jika ada)
-                StudentGrade::updateOrCreate(
+            if ($idBab) {
+                // Buat/update Assessment
+                $assessment = \App\Models\Assessment::updateOrCreate(
                     [
-                        'id_siswa' => $idSiswa,
-                        'id_tp'    => $exam->id_tp,
-                        'id_topic' => $exam->id_topic,
+                        'id_bab' => $idBab,
+                        'id_kelas' => $exam->kbmSession->id_kelas,
+                        'id_mapel' => $exam->kbmSession->id_mapel,
+                        'nama_asesmen' => 'Ujian Live: ' . ($exam->questionBank->judul ?? 'Asesmen'),
+                        'kategori' => 'FORMATIF',
                     ],
-                    ['nilai' => $score]
+                    [
+                        'id_guru' => $exam->kbmSession->id_guru_aktual,
+                        'bentuk_asesmen' => 'Quiz',
+                        'tanggal' => now()->toDateString(),
+                        'status' => 'SELESAI',
+                        'semester' => 'GANJIL',
+                    ]
                 );
-            }
 
-            $msg = $exam->id_topic
+                // Hubungkan TP ke asesmen
+                $assessment->learningObjectives()->syncWithoutDetaching([$exam->id_tp]);
+
+                foreach ($groupedByStudent as $idSiswa => $siswaAnswers) {
+                    $correctCount = $siswaAnswers->where('is_correct', true)->count();
+                    $score = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100) : 0;
+
+                    // Simpan nilai asesmen baru
+                    \App\Models\StudentAssessmentScore::updateOrCreate(
+                        [
+                            'id_assessment' => $assessment->id_assessment,
+                            'id_siswa' => $idSiswa,
+                        ],
+                        ['nilai' => $score]
+                    );
+
+                    // Simpan nilai warisan (legacy) untuk backward compatibility jika ada fitur lama yang menggunakannya
+                    StudentGrade::updateOrCreate(
+                        [
+                            'id_siswa' => $idSiswa,
+                            'id_tp'    => $exam->id_tp,
+                            'id_topic' => $exam->id_topic,
+                        ],
+                        ['nilai' => $score]
+                    );
+                }
+            }
+        }     
+        
+        $msg = $exam->id_topic
                 ? "Ujian selesai! Nilai otomatis masuk ke Topik \"{$exam->learningTopic?->nama_topik}\"."
                 : 'Ujian selesai! Nilai otomatis masuk ke Bab terkait.';
-
-            return redirect()->route('guru.dashboard')->with('message', $msg);
-        }
 
         return redirect()->route('guru.live-exam.laporan-diagnostik', $id);
     }

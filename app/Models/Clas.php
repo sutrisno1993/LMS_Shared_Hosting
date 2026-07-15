@@ -8,7 +8,7 @@ class Clas extends Model
 {
     protected $table = 'classes';
     protected $primaryKey = 'id_kelas';
-    protected $fillable = ['nama_kelas', 'shift_operasional', 'tingkat', 'jurusan', 'id_guru_wali'];
+    protected $fillable = ['nama_kelas', 'shift_operasional', 'tingkat', 'jurusan', 'id_guru_wali', 'cctv_type', 'cctv_url', 'cctv_verification_code'];
 
     public function waliKelas()
     {

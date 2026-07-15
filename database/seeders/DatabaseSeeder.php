@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         if (app()->environment(['local', 'testing', 'development'])) {
             // Hanya jalankan seeder bohong-bohongan di lokal!
             $this->call(DummyDataSeeder::class);
+            $this->call(ComplexCurriculumSeeder::class);
         }
     }
 }

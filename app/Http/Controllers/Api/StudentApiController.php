@@ -236,13 +236,28 @@ class StudentApiController extends Controller
                     ->whereIn('id_tp', $tpList->pluck('id_tp'))
                     ->get();
 
+                $tpNewGrades = \App\Models\StudentAssessmentScore::where('id_siswa', $student->id_siswa)
+                    ->whereHas('assessment.learningObjectives', function ($query) use ($tpList) {
+                        $query->whereIn('assessment_tp.id_tp', $tpList->pluck('id_tp'));
+                    })
+                    ->with('assessment.learningObjectives')
+                    ->get();
+
                 $details = [];
                 $tpTotalScore = 0;
                 $tpGradedCount = 0;
 
                 foreach ($tpList as $tp) {
-                    $gradeObj = $tpGrades->firstWhere('id_tp', $tp->id_tp);
-                    $nilaiTp = $gradeObj ? $gradeObj->nilai : null;
+                    $tpScores = $tpNewGrades->filter(function ($scoreObj) use ($tp) {
+                        return $scoreObj->assessment && $scoreObj->assessment->learningObjectives->contains('id_tp', $tp->id_tp);
+                    });
+
+                    if ($tpScores->isNotEmpty()) {
+                        $nilaiTp = round($tpScores->avg('nilai'));
+                    } else {
+                        $gradeObj = $tpGrades->firstWhere('id_tp', $tp->id_tp);
+                        $nilaiTp = $gradeObj ? $gradeObj->nilai : null;
+                    }
 
                     if ($nilaiTp !== null) {
                         $tpTotalScore += $nilaiTp;

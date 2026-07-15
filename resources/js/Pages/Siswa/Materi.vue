@@ -1,138 +1,198 @@
 <template>
-  <Head title="Bahan Ajar / Materi Pembelajaran" />
+  <Head title="Materi Pembelajaran & Progress Belajar" />
 
   <AppLayout
-    title="Materi Pembelajaran"
-    subtitle="Unduh berkas bahan ajar yang dibagikan oleh guru mata pelajaran Anda"
+    title="Materi Belajar & Capaian TP"
+    subtitle="Akses materi pembelajaran, kegiatan belajar mengajar, serta pantau ketercapaian Tujuan Pembelajaran (TP) Anda"
     :navigation="navigation"
   >
-    <div class="space-y-6 max-w-5xl mx-auto">
-      
-      <!-- Filter / Grouping -->
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-base font-bold">Daftar Bahan Ajar</h2>
-          <p class="text-xs text-slate-500">Silakan pilih mapel untuk melihat berkas materi.</p>
+    <template #topbar-actions>
+      <!-- Dropdown Pilih Mapel -->
+      <div class="flex items-center gap-2 mr-4">
+        <label class="text-xs text-slate-500 font-semibold uppercase">Mata Pelajaran:</label>
+        <select v-model="selectedMapelForm" class="bg-[#111827] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-indigo-500">
+          <option v-for="cs in classSubjects" :key="cs.id_class_subject" :value="cs.id_mapel">
+            {{ cs.subject?.nama_mapel }}
+          </option>
+        </select>
+      </div>
+    </template>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- LEFT 2 COLS: BABS, SUB-MATERI & AKTIVITAS -->
+      <div class="lg:col-span-2 space-y-6">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-white">Daftar Bab & Modul Belajar</h3>
+          <span class="text-xs text-slate-400">Pilih mapel di bar atas untuk mengganti materi.</span>
         </div>
-        
-        <!-- Filter Mapel Select -->
-        <div class="w-48">
-          <select 
-            v-model="selectedMapel" 
-            class="w-full bg-white/5 border border-white/8 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 outline-none focus:border-indigo-500/50"
-          >
-            <option value="ALL">Semua Mapel</option>
-            <option v-for="mapel in mapelList" :key="mapel" :value="mapel">{{ mapel }}</option>
-          </select>
+
+        <div class="space-y-4">
+          <div v-for="bab in babs" :key="bab.id_bab" class="rounded-2xl border border-white/8 bg-[#1A2035] p-5 space-y-4">
+            <!-- Bab Header -->
+            <div class="border-b border-white/5 pb-3">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Bab {{ bab.urutan }} (Semester {{ bab.semester === 'GANJIL' ? '1' : '2' }})
+              </span>
+              <h4 class="font-bold text-white text-base mt-2">{{ bab.nama_bab }}</h4>
+              <p class="text-xs text-slate-400 mt-1 leading-relaxed">{{ bab.deskripsi || 'Tidak ada deskripsi bab.' }}</p>
+            </div>
+
+            <!-- Sub Materis / Handout list -->
+            <div class="space-y-3 pl-4 border-l border-white/10">
+              <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bahan Pembahasan & Sub-Materi</div>
+              
+              <div v-for="sub in bab.sub_materis" :key="sub.id_sub_materi" class="bg-white/2 rounded-xl p-4 border border-white/5 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/3 pb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded text-[8px] font-bold tracking-wider bg-white/10 text-slate-300">
+                      {{ sub.tipe }}
+                    </span>
+                    <h5 class="text-xs font-bold text-slate-200">{{ sub.judul }}</h5>
+                  </div>
+                  
+                  <div class="flex items-center gap-2">
+                    <!-- Download/View actions based on type -->
+                    <a 
+                      v-if="sub.konten && ['LINK', 'YOUTUBE'].includes(sub.tipe)" 
+                      :href="sub.konten" 
+                      target="_blank" 
+                      class="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-lg text-[10px] font-bold transition-all"
+                    >
+                      🔗 Buka Tautan
+                    </a>
+                    <button 
+                      v-else-if="sub.konten" 
+                      @click="viewTextContent(sub)" 
+                      class="px-3 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-lg text-[10px] font-bold transition-all"
+                    >
+                      📖 Baca Materi
+                    </button>
+                    <span v-else class="text-[10px] text-slate-500">Berkas Unduhan</span>
+                  </div>
+                </div>
+
+                <!-- Aktivitas list -->
+                <div class="space-y-2">
+                  <span class="block text-[8px] font-bold text-slate-500 uppercase tracking-widest">Aktivitas yang Harus Diikuti:</span>
+                  
+                  <div v-for="akt in sub.aktivitas_pembelajarans" :key="akt.id_aktivitas" class="bg-black/15 border border-white/5 rounded-xl p-3 flex items-start justify-between gap-3">
+                    <div class="space-y-1">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="px-1.5 py-0.2 bg-green-500/10 text-green-400 border border-green-500/20 text-[8px] font-bold rounded">
+                          {{ akt.tipe_aktivitas }}
+                        </span>
+                        <span class="text-xs font-bold text-slate-300">{{ akt.nama_aktivitas }}</span>
+                        <span v-if="akt.status_wajib" class="text-[8px] text-rose-400 font-extrabold uppercase border border-rose-400/20 bg-rose-400/5 px-1 py-0.2 rounded">Wajib</span>
+                      </div>
+                      <p class="text-[11px] text-slate-400 leading-normal">{{ akt.deskripsi }}</p>
+                    </div>
+                  </div>
+
+                  <div v-if="!sub.aktivitas_pembelajarans || sub.aktivitas_pembelajarans.length === 0" class="text-[10px] text-slate-500 text-center py-1">
+                    Hanya membaca materi. Tidak ada tugas/aktivitas tambahan.
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="!bab.sub_materis || bab.sub_materis.length === 0" class="text-xs text-slate-500 text-center py-4">
+                Belum ada sub-materi di bab ini.
+              </div>
+            </div>
+          </div>
+
+          <div v-if="!babs || babs.length === 0" class="py-12 border border-dashed border-white/10 rounded-2xl text-center text-xs text-slate-500 bg-[#1A2035]">
+            Belum ada materi pembelajaran yang dipetakan oleh guru untuk mapel ini.
+          </div>
         </div>
       </div>
 
-      <!-- Materials List -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        <!-- Material Card -->
-        <div 
-          v-for="item in filteredMaterials" 
-          :key="item.id_materi"
-          class="rounded-2xl border border-white/8 p-5 flex flex-col justify-between space-y-4 hover:border-indigo-500/30 transition-all duration-300 group"
-          style="background: var(--card)"
-        >
+      <!-- RIGHT 1 COL: TP PROGRESS (KKM TRACKING) -->
+      <div class="space-y-6">
+        <div>
+          <h3 class="text-base font-bold text-white">Status Ketercapaian TP</h3>
+          <p class="text-xs text-slate-400">Laporan pemenuhan Kriteria Ketuntasan Minimal (KKM) mata pelajaran</p>
+        </div>
+
+        <div class="rounded-2xl border border-white/8 bg-[#1A2035] p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-white/5 pb-3">
+            <span class="text-xs font-bold text-slate-300">Target Belajar Mapel Ini</span>
+            <span class="text-xs font-bold text-indigo-400">KKM: {{ kkm }}</span>
+          </div>
+
           <div class="space-y-3">
-            <!-- Header Card: Badge mapel & size -->
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-semibold text-[10px] border border-indigo-500/20">
-                📚 {{ item.subject?.nama_mapel || '-' }}
-              </span>
-              <span class="text-[10px] text-slate-500 font-mono">
-                💾 {{ formatBytes(item.file_size) }}
-              </span>
-            </div>
-
-            <!-- Judul & Deskripsi -->
-            <div class="space-y-1">
-              <h3 class="font-bold text-white text-sm group-hover:text-indigo-400 transition-colors">
-                {{ item.judul }}
-              </h3>
-              <p class="text-xs text-slate-400 line-clamp-3">
-                {{ item.deskripsi || 'Tidak ada deskripsi tambahan.' }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Footer Card: Upload details & Download button -->
-          <div class="flex items-center justify-between pt-3 border-t border-white/5">
-            <div class="text-[10px] text-slate-600 space-y-0.5">
-              <div>👨‍🏫 {{ item.teacher?.nama_guru || 'Unknown' }}</div>
-              <div>📅 {{ formatDate(item.created_at) }}</div>
-            </div>
-            
-            <a 
-              :href="`/siswa/materi/${item.id_materi}/download`"
-              class="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all group-hover:scale-105"
+            <div 
+              v-for="tp in tpProgress" 
+              :key="tp.id_tp"
+              class="rounded-xl border p-3.5 space-y-2 bg-white/2"
+              :class="tp.status === 'TERCAPAI' ? 'border-emerald-500/20' : 'border-white/5'"
             >
-              📥 Unduh
-            </a>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold font-mono text-slate-300">{{ tp.kode_tp }}</span>
+                
+                <span 
+                  v-if="tp.status === 'TERCAPAI'"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                >
+                  ✓ Tercapai ({{ tp.nilai }})
+                </span>
+                <span 
+                  v-else-if="tp.nilai !== null"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                >
+                  ⏳ Belum KKM ({{ tp.nilai }})
+                </span>
+                <span 
+                  v-else
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-slate-500/10 text-slate-400 border border-white/5"
+                >
+                  ⚪ Belum Dinilai
+                </span>
+              </div>
+              <p class="text-xs text-slate-300 leading-normal">{{ tp.deskripsi_tp }}</p>
+            </div>
+
+            <div v-if="!tpProgress || tpProgress.length === 0" class="text-center py-6 text-xs text-slate-500">
+              Belum ada Tujuan Pembelajaran (TP) yang terpetakan untuk mapel ini.
+            </div>
           </div>
-
         </div>
-
-        <!-- Empty State -->
-        <div 
-          v-if="filteredMaterials.length === 0" 
-          class="col-span-full rounded-2xl border border-white/8 p-12 text-center text-slate-500"
-          style="background: var(--card)"
-        >
-          <div class="text-4xl mb-3">🏖️</div>
-          <div class="font-bold">Tidak ada bahan ajar</div>
-          <div class="text-[11px] text-slate-600 mt-1">Guru belum membagikan berkas materi untuk kelas atau mapel pilihan Anda.</div>
-        </div>
-
       </div>
 
     </div>
+
+    <!-- TEXT CONTENT READER MODAL -->
+    <div v-if="showReaderModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-[#1F2937] border border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div class="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/3">
+          <h3 class="font-bold text-white text-sm">📖 Baca Materi: {{ activeSub?.judul }}</h3>
+          <button @click="showReaderModal = false" class="text-slate-400 hover:text-white transition-colors">✕</button>
+        </div>
+        <div class="p-6 max-h-[400px] overflow-y-auto custom-scrollbar text-sm text-slate-200 space-y-4 whitespace-pre-line leading-relaxed">
+          {{ activeSub?.konten }}
+        </div>
+        <div class="px-6 py-4 border-t border-white/5 bg-white/3 flex justify-end shrink-0">
+          <button @click="showReaderModal = false" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white transition-colors">
+            Selesai Membaca
+          </button>
+        </div>
+      </div>
+    </div>
+
   </AppLayout>
 </template>
 
 <script setup>
-import { Head } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { ref, watch, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
-  materials: Array,
+  classSubjects: Array,
+  selectedMapel: [String, Number],
+  babs: Array,
+  tpProgress: Array,
 });
-
-const selectedMapel = ref('ALL');
-
-// Get unique subjects list for filter dropdown
-const mapelList = computed(() => {
-  if (!props.materials) return [];
-  const list = props.materials.map(item => item.subject?.nama_mapel).filter(Boolean);
-  return [...new Set(list)];
-});
-
-// Filtered materials computed list
-const filteredMaterials = computed(() => {
-  if (!props.materials) return [];
-  if (selectedMapel.value === 'ALL') return props.materials;
-  return props.materials.filter(item => item.subject?.nama_mapel === selectedMapel.value);
-});
-
-// Utilities
-const formatBytes = (bytes, decimals = 2) => {
-  if (!bytes || bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-};
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
-};
 
 const navigation = [
   {
@@ -152,4 +212,43 @@ const navigation = [
     ],
   },
 ];
+
+const selectedMapelForm = ref(props.selectedMapel);
+
+// Watch selected mapel changes
+watch(selectedMapelForm, (val) => {
+  if (val) {
+    router.get('/siswa/materi', { id_mapel: val }, { preserveState: true });
+  }
+});
+
+// Compute KKM
+const kkm = computed(() => {
+  const current = (props.classSubjects || []).find(cs => cs.id_mapel === selectedMapelForm.value);
+  return current?.subject?.kkm ?? 75;
+});
+
+// Modal reader for text materials
+const showReaderModal = ref(false);
+const activeSub = ref(null);
+const viewTextContent = (sub) => {
+  activeSub.value = sub;
+  showReaderModal.value = true;
+};
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+</style>

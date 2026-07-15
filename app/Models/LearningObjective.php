@@ -43,4 +43,19 @@ class LearningObjective extends Model
     {
         return $this->hasMany(LearningTopic::class, 'id_tp', 'id_tp');
     }
+
+    public function atp()
+    {
+        return $this->belongsTo(Atp::class, 'id_atp', 'id_atp');
+    }
+
+    public function babs()
+    {
+        return $this->belongsToMany(Bab::class, 'bab_tp', 'id_tp', 'id_bab');
+    }
+
+    public function assessments()
+    {
+        return $this->belongsToMany(Assessment::class, 'assessment_tp', 'id_tp', 'id_assessment');
+    }
 }

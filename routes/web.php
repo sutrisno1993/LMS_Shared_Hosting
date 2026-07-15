@@ -71,6 +71,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/wali-kelas', [AdminController::class, 'waliKelas'])->name('wali-kelas');
     Route::post('/wali-kelas', [AdminController::class, 'updateWaliKelas']);
     Route::post('/wali-kelas/reset', [AdminController::class, 'resetAllWaliKelas']);
+    Route::post('/classes/cctv', [AdminController::class, 'updateClassCctv'])->name('classes.cctv');
     
     // Manajemen Siswa
     Route::get('/siswa', [AdminController::class, 'siswaIndex'])->name('siswa');
@@ -110,6 +111,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/laporan-performa', [\App\Http\Controllers\AdminController::class, 'laporanPerforma'])->name('laporan-performa');
     Route::get('/jurnal', [\App\Http\Controllers\AdminController::class, 'jurnalIndex'])->name('jurnal.index');
     Route::get('/laporan-kasus-siswa', [\App\Http\Controllers\AdminController::class, 'laporanKasusSiswa'])->name('laporan-kasus-siswa');
+    Route::get('/laporan-kehadiran', [\App\Http\Controllers\AttendanceReportController::class, 'index'])->name('laporan-kehadiran');
+
     
     // Manajemen Guru Piket
     Route::get('/piket', [\App\Http\Controllers\AdminController::class, 'piketIndex'])->name('piket.index');
@@ -134,6 +137,7 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('guru')->name('guru.')->grou
     Route::get('/dashboard', [\App\Http\Controllers\GuruController::class, 'dashboard'])->name('dashboard');
     Route::get('/sesi-kbm/{id}', [\App\Http\Controllers\GuruController::class, 'sesiKbm'])->name('sesi-kbm');
     Route::post('/sesi-kbm/{id_sesi}/mulai', [\App\Http\Controllers\GuruController::class, 'mulaiKbm'])->name('kbm.mulai');
+    Route::post('/sesi-kbm/{id_sesi}/selfie', [\App\Http\Controllers\GuruController::class, 'uploadSelfieKbm'])->name('kbm.selfie.store');
     Route::post('/sesi-kbm/{id_sesi}/selesai', [\App\Http\Controllers\GuruController::class, 'selesaiKbm'])->name('kbm.selesai');
     Route::post('/sesi-kbm/{id_sesi}/presensi', [\App\Http\Controllers\GuruController::class, 'simpanPresensi'])->name('kbm.presensi.store');
     Route::get('/riwayat-jurnal', [\App\Http\Controllers\GuruController::class, 'riwayatJurnal'])->name('riwayat-jurnal');
@@ -147,8 +151,32 @@ Route::middleware(['auth', 'role:TEACHER'])->prefix('guru')->name('guru.')->grou
     
     Route::get('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'pemetaanMateri'])->name('pemetaan-materi');
     Route::post('/pemetaan-materi', [\App\Http\Controllers\GuruController::class, 'simpanPemetaanMateri']);
+    Route::post('/pemetaan-materi/copy', [\App\Http\Controllers\GuruController::class, 'copyMapping'])->name('pemetaan-materi.copy');
     Route::delete('/pemetaan-materi/{id_tp}', [\App\Http\Controllers\GuruController::class, 'hapusPemetaanMateri'])->name('pemetaan-materi.delete');
     Route::delete('/pemetaan-materi/element/{id_element}', [\App\Http\Controllers\GuruController::class, 'hapusElement'])->name('pemetaan-materi.element.delete');
+    
+    // Rute Baru Refaktor Pemetaan Kurikulum (ATP, Bab, SubMateri, Aktivitas)
+    Route::post('/pemetaan-materi/atp', [\App\Http\Controllers\GuruController::class, 'simpanAtp'])->name('pemetaan-materi.atp.store');
+    Route::delete('/pemetaan-materi/atp/{id_atp}', [\App\Http\Controllers\GuruController::class, 'hapusAtp'])->name('pemetaan-materi.atp.delete');
+    
+    Route::post('/pemetaan-materi/bab', [\App\Http\Controllers\GuruController::class, 'simpanBab'])->name('pemetaan-materi.bab.store');
+    Route::delete('/pemetaan-materi/bab/{id_bab}', [\App\Http\Controllers\GuruController::class, 'hapusBab'])->name('pemetaan-materi.bab.delete');
+    Route::post('/pemetaan-materi/bab/link-tp', [\App\Http\Controllers\GuruController::class, 'linkTpToBab'])->name('pemetaan-materi.bab.link-tp');
+    
+    Route::post('/pemetaan-materi/sub-materi', [\App\Http\Controllers\GuruController::class, 'simpanSubMateri'])->name('pemetaan-materi.sub-materi.store');
+    Route::delete('/pemetaan-materi/sub-materi/{id_sub_materi}', [\App\Http\Controllers\GuruController::class, 'hapusSubMateri'])->name('pemetaan-materi.sub-materi.delete');
+    
+    Route::post('/pemetaan-materi/aktivitas', [\App\Http\Controllers\GuruController::class, 'simpanAktivitas'])->name('pemetaan-materi.aktivitas.store');
+    Route::delete('/pemetaan-materi/aktivitas/{id_aktivitas}', [\App\Http\Controllers\GuruController::class, 'hapusAktivitas'])->name('pemetaan-materi.aktivitas.delete');
+    
+    // Rute Baru Rencana Penilaian & Asesmen
+    Route::post('/rencana-penilaian', [\App\Http\Controllers\GuruController::class, 'simpanRencanaPenilaian'])->name('rencana-penilaian.store');
+    Route::post('/rencana-penilaian/generate-draft', [\App\Http\Controllers\GuruController::class, 'generateDraftAsesmen'])->name('rencana-penilaian.generate');
+    
+    Route::post('/asesmen/store', [\App\Http\Controllers\GuruController::class, 'simpanAsesmen'])->name('asesmen.store');
+    Route::delete('/asesmen/{id_assessment}', [\App\Http\Controllers\GuruController::class, 'hapusAsesmen'])->name('asesmen.delete');
+    Route::post('/asesmen/input-nilai', [\App\Http\Controllers\GuruController::class, 'simpanNilaiAsesmen'])->name('asesmen.input-nilai');
+
     Route::get('/nilai-sumatif', [\App\Http\Controllers\GuruController::class, 'nilaiSumatif'])->name('nilai-sumatif');
     Route::post('/nilai-sumatif', [\App\Http\Controllers\GuruController::class, 'simpanNilaiSumatif']);
     Route::get('/nilai-akhir', [\App\Http\Controllers\GuruController::class, 'nilaiAkhir'])->name('nilai-akhir');

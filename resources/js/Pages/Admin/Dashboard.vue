@@ -58,7 +58,7 @@
               <th class="text-left px-4 py-3 text-[10px] font-semibold text-slate-600 uppercase tracking-wider border-b border-white/8">Mapel</th>
               <th class="text-left px-4 py-3 text-[10px] font-semibold text-slate-600 uppercase tracking-wider border-b border-white/8">Guru</th>
               <th class="text-left px-4 py-3 text-[10px] font-semibold text-slate-600 uppercase tracking-wider border-b border-white/8">Status</th>
-              <th class="text-left px-4 py-3 text-[10px] font-semibold text-slate-600 uppercase tracking-wider border-b border-white/8">Jam Scan</th>
+              <th class="text-left px-4 py-3 text-[10px] font-semibold text-slate-600 uppercase tracking-wider border-b border-white/8">Jam Masuk</th>
             </tr>
           </thead>
           <tbody>
@@ -282,6 +282,65 @@
                  <div class="text-xs text-white font-semibold truncate">{{ cls.details.guru }}</div>
                </div>
 
+                <!-- CCTV Live Feed Visual Representation -->
+                <div class="mt-2.5">
+                  <!-- Real CCTV Configured -->
+                  <template v-if="cls.cctv_type && cls.cctv_type !== 'NONE' && cls.cctv_url">
+                    <div class="relative w-full h-28 rounded-xl overflow-hidden border border-white/10 bg-black shadow-inner">
+                      <iframe 
+                        v-if="cls.cctv_type === 'IFRAME'" 
+                        :src="cls.cctv_url" 
+                        class="w-full h-full border-0" 
+                        allow="autoplay; encrypted-media; fullscreen"
+                        allowfullscreen
+                      ></iframe>
+                      <video 
+                        v-else-if="cls.cctv_type === 'STREAM'"
+                        :ref="el => setVideoRef(el, cls)"
+                        autoplay 
+                        muted 
+                        playsinline
+                        class="w-full h-full object-cover"
+                      ></video>
+                      
+                      <!-- Overlay transparent to handle clicks and show Live indicator -->
+                      <div class="absolute inset-0 z-10 bg-transparent flex flex-col justify-between p-2 pointer-events-none">
+                        <div class="flex items-center gap-1 self-start px-1.5 py-0.5 rounded bg-black/60 text-[7px] font-black text-red-500 uppercase tracking-widest border border-red-500/20">
+                          <span class="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
+                          <span>LIVE</span>
+                        </div>
+                        <div class="text-[8px] text-white/80 font-mono font-bold self-start bg-black/40 px-1 rounded">
+                          🎥 CCTV
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                  
+                  <!-- Fallback to Selfie (simulated CCTV) -->
+                  <template v-else>
+                    <div v-if="cls.details && cls.details.foto_selfie" class="relative w-full h-36 rounded-xl overflow-hidden border border-white/10 bg-slate-950 group/cctv shadow-inner">
+                      <img :src="cls.details.foto_selfie" class="w-full h-full object-contain grayscale-[20%] group-hover/cctv:grayscale-0 transition-all duration-300" />
+                      <div class="absolute inset-0 bg-gradient-to-t from-black/75 to-transparent"></div>
+                      <!-- Live Camera HUD -->
+                      <div class="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 text-[7px] font-black text-red-500 uppercase tracking-widest border border-red-500/20">
+                        <span class="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
+                        <span>LIVE (SELFIE)</span>
+                      </div>
+                      <div class="absolute bottom-2 left-2 text-[8px] text-white/80 font-mono font-bold">
+                        🔴 REC
+                      </div>
+                      <div v-if="cls.details.latitude" class="absolute bottom-2 right-2 text-[7px] text-emerald-400 font-mono bg-black/50 px-1 rounded">
+                        GPS OK
+                      </div>
+                    </div>
+                    <div v-else-if="cls.details" class="relative w-full h-28 rounded-xl overflow-hidden border border-white/5 bg-slate-950/60 flex flex-col items-center justify-center text-slate-600 font-mono select-none">
+                      <div class="text-lg mb-0.5 opacity-40">🎥</div>
+                      <div class="text-[8px] uppercase tracking-widest font-black opacity-55">No Camera Feed</div>
+                      <div class="text-[6px] mt-0.5 opacity-30 font-semibold">CCTV / Selfie Belum Ada</div>
+                    </div>
+                  </template>
+                </div>
+
                <!-- WhatsApp Button on Card if Empty / Late / Alpa -->
                <div v-if="cls.details && (cls.statusText === 'Kosong / Belum Masuk' || cls.statusText === 'Guru Alpa / Kosong' || cls.statusText === 'Guru Terlambat') && cls.details.no_wa" class="mt-3">
                  <a 
@@ -311,6 +370,34 @@
             <span class="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white">{{ selectedClassDetail.statusText }}</span>
           </div>
           
+          <!-- CCTV Live Feed in Detail Modal (Real CCTV) -->
+          <div v-if="selectedClassDetail.cctv_type && selectedClassDetail.cctv_type !== 'NONE' && selectedClassDetail.cctv_url" class="space-y-2 mb-4">
+            <div class="text-[10px] text-slate-500 uppercase font-bold tracking-widest flex items-center justify-between">
+              <span>🎥 LIVE CCTV STREAM</span>
+              <span v-if="selectedClassDetail.cctv_verification_code" class="text-[9px] text-slate-600 font-mono font-normal">
+                Code: {{ selectedClassDetail.cctv_verification_code }}
+              </span>
+            </div>
+            <div class="relative w-full h-52 rounded-xl overflow-hidden border border-white/10 bg-black">
+              <iframe 
+                v-if="selectedClassDetail.cctv_type === 'IFRAME'" 
+                :src="selectedClassDetail.cctv_url" 
+                class="w-full h-full border-0" 
+                allow="autoplay; encrypted-media; fullscreen" 
+                allowfullscreen
+              ></iframe>
+              <video 
+                v-else-if="selectedClassDetail.cctv_type === 'STREAM'"
+                :ref="el => initializeHlsPlayer(el, selectedClassDetail.cctv_url)"
+                autoplay 
+                controls
+                muted 
+                playsinline
+                class="w-full h-full object-cover"
+              ></video>
+            </div>
+          </div>
+
           <template v-if="selectedClassDetail.details">
             <div>
               <div class="text-xs text-slate-500 mb-1 uppercase font-bold tracking-widest">Mata Pelajaran</div>
@@ -326,7 +413,7 @@
                 <div class="text-sm font-semibold text-white font-mono">{{ selectedClassDetail.details.jam_ke }}</div>
               </div>
               <div>
-                <div class="text-xs text-slate-500 mb-1 uppercase font-bold tracking-widest">Waktu Scan</div>
+                <div class="text-xs text-slate-500 mb-1 uppercase font-bold tracking-widest">Waktu Masuk</div>
                 <div class="text-sm font-semibold text-white font-mono">{{ selectedClassDetail.details.scan }}</div>
               </div>
             </div>
@@ -335,6 +422,24 @@
               <p class="text-sm text-white italic">
                 {{ selectedClassDetail.details.materi || 'Guru belum mengisi jurnal materi.' }}
               </p>
+            </div>
+
+            <!-- Selfie & Location details in Detail Modal -->
+            <div v-if="selectedClassDetail.details.foto_selfie" class="space-y-2 mt-3 pt-3 border-t border-white/5">
+              <div class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Foto Presensi / Selfie KBM</div>
+              <div class="relative w-full h-64 rounded-xl overflow-hidden border border-white/10 bg-slate-950">
+                <img :src="selectedClassDetail.details.foto_selfie" class="w-full h-full object-contain" />
+                <div class="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 text-[7px] font-black text-red-500 uppercase tracking-widest flex items-center gap-1 border border-red-500/20">
+                  <span class="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
+                  <span>CCTV CAMERA</span>
+                </div>
+              </div>
+              <div v-if="selectedClassDetail.details.latitude && selectedClassDetail.details.longitude" class="text-[9px] text-slate-400 flex items-center gap-1 font-mono">
+                <span>📍 Koordinat:</span>
+                <a :href="`https://www.google.com/maps?q=${selectedClassDetail.details.latitude},${selectedClassDetail.details.longitude}`" target="_blank" class="text-indigo-400 hover:text-indigo-300 font-bold hover:underline transition-colors">
+                  {{ selectedClassDetail.details.latitude }}, {{ selectedClassDetail.details.longitude }} (Buka Google Maps)
+                </a>
+              </div>
             </div>
           </template>
           <template v-else>
@@ -381,6 +486,61 @@ const props = defineProps({
 const page = usePage();
 const showCctvModal = ref(false);
 const selectedClassDetail = ref(null);
+
+// HLS Stream Video Player setup
+const videoRefs = new Map();
+const setVideoRef = (el, cls) => {
+  if (el) {
+    videoRefs.set(cls.id_kelas, { el, cls });
+    initializeHlsPlayer(el, cls.cctv_url);
+  } else {
+    videoRefs.delete(cls.id_kelas);
+  }
+};
+
+const initializeHlsPlayer = (videoEl, streamUrl) => {
+  if (!videoEl || !streamUrl) return;
+  
+  // Clean up previous event listeners if any
+  videoEl.onloadedmetadata = null;
+  
+  if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    videoEl.src = streamUrl;
+  } else {
+    if (window.Hls) {
+      setupHlsInstance(videoEl, streamUrl);
+    } else {
+      loadHlsScript(() => {
+        setupHlsInstance(videoEl, streamUrl);
+      });
+    }
+  }
+};
+
+const setupHlsInstance = (videoEl, streamUrl) => {
+  if (!window.Hls) return;
+  if (videoEl.hlsInstance) {
+    videoEl.hlsInstance.destroy();
+  }
+  const hls = new window.Hls({
+    maxMaxBufferLength: 10,
+    liveSyncPosition: ~0,
+  });
+  hls.loadSource(streamUrl);
+  hls.attachMedia(videoEl);
+  videoEl.hlsInstance = hls;
+};
+
+const loadHlsScript = (callback) => {
+  if (window.Hls) {
+    callback();
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js';
+  script.onload = callback;
+  document.head.appendChild(script);
+};
 
 const serverTime = ref(new Date());
 let timer = null;
@@ -514,7 +674,10 @@ const currentClassesStatus = computed(() => {
         no_wa: session.no_wa,
         jam_ke: session.jam_ke,
         materi: session.materi_log,
-        scan: session.scan_masuk
+        scan: session.scan_masuk,
+        foto_selfie: session.foto_selfie,
+        latitude: session.latitude,
+        longitude: session.longitude,
       }
     };
   });

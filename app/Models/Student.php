@@ -28,4 +28,9 @@ class Student extends Model
     {
         return $this->hasMany(StudentAttendance::class, 'id_siswa', 'id_siswa');
     }
+
+    public function disciplines()
+    {
+        return $this->hasMany(StudentDiscipline::class, 'id_siswa', 'id_siswa');
+    }
 }

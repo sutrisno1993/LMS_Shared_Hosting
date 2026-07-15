@@ -36,6 +36,22 @@
           
           <h3 class="text-2xl font-black tracking-tight mb-6">{{ cls.nama_kelas }}</h3>
           
+          <!-- CCTV Config Info -->
+          <div class="mb-5 bg-black/10 rounded-xl p-3 border border-white/5 flex items-center justify-between">
+            <div>
+              <div class="text-[9px] uppercase font-bold text-slate-500 tracking-wider">CCTV Kelas</div>
+              <div class="text-xs font-bold mt-0.5" :class="cls.cctv_type && cls.cctv_type !== 'NONE' ? 'text-indigo-400' : 'text-slate-400'">
+                {{ cls.cctv_type && cls.cctv_type !== 'NONE' ? `Aktif (${cls.cctv_type})` : 'Nonaktif' }}
+              </div>
+            </div>
+            <button 
+              @click="openCctvConfig(cls)"
+              class="px-2.5 py-1.5 bg-indigo-600/10 hover:bg-indigo-600 hover:text-white text-indigo-400 border border-indigo-500/20 rounded-lg text-[10px] font-bold transition-all"
+            >
+              🎥 Atur
+            </button>
+          </div>
+          
           <div class="mt-auto">
             <div class="flex items-center justify-between mb-2">
               <label class="block text-[10px] uppercase font-bold text-slate-500 tracking-wider">Wali Kelas</label>
@@ -77,6 +93,75 @@
         </div>
       </div>
     </div>
+
+    <!-- CCTV CONFIG MODAL -->
+    <div v-if="selectedClassForCctv" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-[#1E293B] rounded-2xl border border-white/10 w-full max-w-md overflow-hidden shadow-2xl relative">
+        <div class="px-6 py-4 border-b border-white/10 bg-indigo-600/20 flex justify-between items-center">
+          <h3 class="text-lg font-black text-white">Pengaturan CCTV - {{ selectedClassForCctv.nama_kelas }}</h3>
+          <button @click="closeCctvConfig" class="text-white/50 hover:text-white transition-colors">✕</button>
+        </div>
+        <form @submit.prevent="saveCctvConfig" class="p-6 space-y-4">
+          <div>
+            <label class="block text-xs uppercase font-bold text-slate-400 mb-2">Tipe Koneksi CCTV</label>
+            <select 
+              v-model="cctvForm.cctv_type"
+              class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            >
+              <option value="NONE">Tidak Ada / Nonaktif</option>
+              <option value="STREAM">Direct HLS Stream (.m3u8)</option>
+              <option value="IFRAME">EZVIZ Iframe Embed Link</option>
+            </select>
+          </div>
+
+          <div v-if="cctvForm.cctv_type !== 'NONE'">
+            <label class="block text-xs uppercase font-bold text-slate-400 mb-2">
+              {{ cctvForm.cctv_type === 'IFRAME' ? 'Link Iframe Embed (Ezviz)' : 'URL Stream (.m3u8 / RTSP Gateway)' }}
+            </label>
+            <input 
+              type="text" 
+              v-model="cctvForm.cctv_url"
+              placeholder="https://..."
+              class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+              required
+            />
+            <p class="text-[10px] text-slate-500 mt-1">
+              {{ cctvForm.cctv_type === 'IFRAME' 
+                ? 'Contoh: https://open.ys7.com/openlive/xxxx.html?autoplay=1 atau link https://open.ezvizlife.com/ezopen/h5/iframe?url=...' 
+                : 'Contoh: http://192.168.1.100:8554/live/kelas_10a.m3u8 (HLS Stream dari media server local seperti MediaMTX)' 
+              }}
+            </p>
+          </div>
+
+          <div v-if="cctvForm.cctv_type !== 'NONE'">
+            <label class="block text-xs uppercase font-bold text-slate-400 mb-2">Kode Verifikasi CCTV (Opsional)</label>
+            <input 
+              type="text" 
+              v-model="cctvForm.cctv_verification_code"
+              placeholder="Masukkan kode verifikasi (biasanya di label CCTV)"
+              class="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            />
+          </div>
+
+          <div class="pt-4 border-t border-white/5 flex justify-end gap-2">
+            <button 
+              type="button" 
+              @click="closeCctvConfig" 
+              class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white transition-colors"
+            >
+              Batal
+            </button>
+            <button 
+              type="submit" 
+              :disabled="isSavingCctv"
+              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg text-xs font-bold text-white transition-colors"
+            >
+              {{ isSavingCctv ? 'Menyimpan...' : 'Simpan Pengaturan' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </AppLayout>
 </template>
 
@@ -91,6 +176,42 @@ const props = defineProps({
 });
 
 const savingId = ref(null);
+
+const selectedClassForCctv = ref(null);
+const isSavingCctv = ref(false);
+const cctvForm = ref({
+  id_kelas: null,
+  cctv_type: 'NONE',
+  cctv_url: '',
+  cctv_verification_code: ''
+});
+
+const openCctvConfig = (cls) => {
+  selectedClassForCctv.value = cls;
+  cctvForm.value = {
+    id_kelas: cls.id_kelas,
+    cctv_type: cls.cctv_type || 'NONE',
+    cctv_url: cls.cctv_url || '',
+    cctv_verification_code: cls.cctv_verification_code || ''
+  };
+};
+
+const closeCctvConfig = () => {
+  selectedClassForCctv.value = null;
+};
+
+const saveCctvConfig = () => {
+  isSavingCctv.value = true;
+  router.post('/admin/classes/cctv', cctvForm.value, {
+    preserveScroll: true,
+    onSuccess: () => {
+      closeCctvConfig();
+    },
+    onFinish: () => {
+      isSavingCctv.value = false;
+    }
+  });
+};
 
 const isTeacherAssigned = (guruId, currentClassId) => {
   if (!guruId) return false;

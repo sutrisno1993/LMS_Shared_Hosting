@@ -8,7 +8,7 @@
   >
     <template #topbar-actions>
       <span class="text-xs font-mono" :class="sessionStatus === 'AKTIF' ? 'text-green-400' : sessionStatus === 'SELESAI' ? 'text-blue-400' : sessionStatus === 'SCANNING' ? 'text-indigo-400' : 'text-yellow-400'">
-        {{ sessionStatus === 'AKTIF' ? '🟢 Sesi Aktif' : sessionStatus === 'SELESAI' ? '🔵 Sesi Selesai' : sessionStatus === 'SCANNING' ? '⚡ Menunggu Scan QR' : '🟡 Menunggu Start' }}
+        {{ sessionStatus === 'AKTIF' ? '🟢 Sesi Aktif' : sessionStatus === 'SELESAI' ? '🔵 Sesi Selesai' : sessionStatus === 'SCANNING' ? '⚡ Menunggu Selfie Guru' : '🟡 Menunggu Start' }}
       </span>
     </template>
 
@@ -37,64 +37,111 @@
             </div>
             <div>
               <div class="font-bold" :class="sessionStatus === 'AKTIF' ? 'text-green-400' : sessionStatus === 'SELESAI' ? 'text-blue-400' : sessionStatus === 'SCANNING' ? 'text-indigo-400' : 'text-yellow-400'">
-                {{ sessionStatus === 'AKTIF' ? 'KELAS AKTIF' : sessionStatus === 'SELESAI' ? 'SESI SELESAI' : sessionStatus === 'SCANNING' ? 'MENUNGGU PRESENSI SISWA' : 'PENDING' }}
+                {{ sessionStatus === 'AKTIF' ? 'KELAS AKTIF' : sessionStatus === 'SELESAI' ? 'SESI SELESAI' : sessionStatus === 'SCANNING' ? 'MENUNGGU SELFIE GURU' : 'PENDING' }}
               </div>
               <div class="text-xs text-slate-500 mt-0.5">
                 {{ sessionStatus === 'AKTIF' ? 'Pembelajaran sedang berlangsung. Absensi default hadir.' : 
                    sessionStatus === 'SELESAI' ? 'Pertemuan kelas ini sudah selesai dideklarasikan.' :
-                   sessionStatus === 'SCANNING' ? 'Minta salah satu perwakilan siswa untuk scan QR Code agar sesi aktif.' :
+                   sessionStatus === 'SCANNING' ? 'Silakan ambil foto selfie bersama siswa di kelas untuk mengaktifkan sesi KBM.' :
                    'Tekan tombol Mulai Sesi KBM di Dashboard untuk memulai kelas.' }}
               </div>
             </div>
           </div>
         </div>
 
-        <!-- QR Code Container (hanya jika SCANNING) -->
-        <div v-if="sessionStatus === 'SCANNING'" class="rounded-2xl border border-white/8 p-7 text-center" style="background: var(--card)">
-          <div class="text-sm font-bold mb-1">QR Code Absensi</div>
-          <div class="text-xs text-slate-500 mb-5">Gunakan QR ini untuk mengaktifkan sesi kelas</div>
+        <!-- Selfie Check-in Container (hanya jika SCANNING) -->
+        <div v-if="sessionStatus === 'SCANNING'" class="rounded-2xl border border-white/8 p-6 text-center shadow-lg" style="background: var(--card)">
+          <div class="text-sm font-bold mb-1 text-white">Verifikasi Selfie Check-in</div>
+          <div class="text-xs text-amber-400 font-bold mb-4 animate-pulse">⚠️ PENTING: Wajib memutar HP ke posisi horizontal (landscape) agar seluruh siswa masuk dalam foto.</div>
 
-          <div class="relative inline-block">
-            <!-- SVG Countdown ring -->
-            <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 200 200"
-                 style="width:220px;height:220px;top:-10px;left:-10px;">
-              <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="4"/>
-              <circle
-                cx="100" cy="100" r="90"
-                fill="none"
-                stroke="#4F46E5"
-                stroke-width="4"
-                stroke-linecap="round"
-                :stroke-dasharray="565"
-                :stroke-dashoffset="565 - (565 * countdownPct / 100)"
-                style="transition: stroke-dashoffset 1s linear;"
-              />
-            </svg>
+          <!-- Video Stream or Capture Preview -->
+          <div class="relative w-full max-w-sm mx-auto aspect-[4/3] rounded-2xl bg-black/50 overflow-hidden border border-white/8 shadow-inner flex items-center justify-center">
+            <!-- Captured Image preview -->
+            <img 
+              v-if="capturedImage"
+              :src="capturedImage"
+              class="w-full h-full object-cover"
+              alt="Hasil Capture Selfie"
+            />
 
-            <!-- QR Code box -->
-            <div class="relative w-48 h-48 mx-auto rounded-2xl bg-white flex items-center justify-center shadow-2xl shadow-indigo-500/20"
-                 style="width:200px;height:200px;">
-              <QrcodeVue :value="qrPayload" :size="170" level="H" render-as="svg" />
+            <!-- Placeholder / Camera Off -->
+            <div v-else class="text-slate-500 text-xs p-4 flex flex-col items-center gap-3 w-full">
+              <span class="text-4xl animate-bounce">📷</span>
+              <span class="font-semibold text-slate-400">Silakan ambil foto selfie bersama murid</span>
+              
+              <div class="flex flex-col gap-2 w-full max-w-[240px]">
+                <!-- Input file/kamera bawaan HP (Utama) -->
+                <label 
+                  class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all shadow-md active:scale-95 cursor-pointer text-center flex items-center justify-center gap-1.5"
+                >
+                  📸 Ambil Foto via Kamera HP
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="user" 
+                    class="hidden" 
+                    @change="handleFileInput"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <!-- Fetching GPS indicator -->
+            <div v-if="isLocationFetching" class="absolute top-3 left-3 bg-black/85 px-3 py-1.5 rounded-full text-[10px] text-indigo-300 border border-indigo-500/25 flex items-center gap-1.5 backdrop-blur-md">
+              <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+              Menentukan koordinat GPS...
+            </div>
+            
+            <!-- GPS ready indicator -->
+            <div v-else-if="coords.latitude" class="absolute top-3 left-3 bg-black/85 px-3 py-1.5 rounded-full text-[10px] text-green-400 border border-green-500/25 flex items-center gap-1.5 backdrop-blur-md">
+              <span class="w-2 h-2 rounded-full bg-green-400"></span>
+              GPS Terkunci ({{ coords.latitude.toFixed(4) }}, {{ coords.longitude.toFixed(4) }})
             </div>
           </div>
 
-          <!-- Countdown display -->
-          <div class="mt-6">
-            <div class="text-3xl font-black font-mono tabular-nums text-indigo-400">
-              {{ countdownDisplay }}
+          <!-- GPS Warning if not supported / error -->
+          <div v-if="!isLocationFetching && !coords.latitude" class="mt-3.5 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3.5 py-2.5 rounded-xl text-center max-w-sm mx-auto">
+            ⚠️ Izin lokasi/GPS diperlukan untuk validasi kehadiran. Aktifkan GPS lalu izinkan browser mengakses lokasi.
+          </div>
+
+          <!-- Controls -->
+          <div class="mt-5 space-y-2.5 max-w-sm mx-auto">
+            <!-- Action buttons after capture -->
+            <div v-if="capturedImage" class="flex gap-2">
+              <label 
+                class="flex-1 py-3 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 font-bold rounded-xl text-xs transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5"
+              >
+                🔄 Foto Ulang
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="user" 
+                  class="hidden" 
+                  @change="handleFileInput"
+                />
+              </label>
+              <button 
+                type="button"
+                @click="submitSelfie"
+                :disabled="isUploadingSelfie"
+                class="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                <span v-if="isUploadingSelfie" class="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin"></span>
+                🚀 Unggah & Aktifkan KBM
+              </button>
             </div>
-            <div class="text-xs text-slate-500 mt-1">Token kedaluwarsa dalam</div>
           </div>
 
           <!-- Dev mode bypass button -->
-          <div v-if="$page.props.app?.is_local_env" class="mt-5 pt-4 border-t border-white/5">
+          <div v-if="$page.props.app?.is_local_env && !capturedImage" class="mt-5 pt-4 border-t border-white/5 max-w-sm mx-auto">
             <button 
+              type="button"
               @click="bypassScan"
               :disabled="isBypassing"
               class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:-translate-y-0.5 disabled:-translate-y-0 flex items-center justify-center gap-1.5"
             >
               <span v-if="isBypassing" class="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin"></span>
-              ⚡ Simulasi Scan Siswa (Bypass QR)
+              ⚡ Simulasi Selfie (Bypass/Isi Otomatis)
             </button>
           </div>
         </div>
@@ -293,7 +340,7 @@
             <!-- Manual absensi hanya aktif setelah sesi AKTIF -->
             <div v-if="sessionStatus === 'PENDING' || sessionStatus === 'SCANNING'"
                  class="text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1.5 rounded-lg">
-              🔒 Tunggu scan pertama
+              🔒 Tunggu Selfie Check-in
             </div>
             <div v-else-if="sessionStatus === 'SELESAI'"
                  class="text-[10px] text-slate-400 bg-white/5 border border-white/10 px-2.5 py-1.5 rounded-lg">
@@ -408,7 +455,6 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import QrcodeVue from 'qrcode.vue';
 
 const props = defineProps({ 
   sessionId: [String, Number], 
@@ -481,34 +527,206 @@ const launchExam = () => {
   });
 };
 
-// ---- QR Code Payload ----
-const qrPayload = ref('');
-const generateQrPayload = () => {
-  const page = usePage();
-  const offset = page.props.app?.time_offset || 0;
-  return JSON.stringify({
-    id_kbm_session: props.sessionId,
-    timestamp: Date.now() + offset
+// ---- Camera and Selfie state ----
+const videoRef = ref(null);
+const stream = ref(null);
+const capturedImage = ref(null);
+const isCameraActive = ref(false);
+const isLocationFetching = ref(false);
+const coords = ref({ latitude: null, longitude: null });
+const isUploadingSelfie = ref(false);
+const isBypassing = ref(false);
+
+const startCamera = async () => {
+  try {
+    capturedImage.value = null;
+    isCameraActive.value = true;
+    stream.value = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false
+    });
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream.value;
+    }
+  } catch (err) {
+    console.error("Gagal mengakses kamera:", err);
+    window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Gagal mengakses kamera. Silakan periksa izin kamera Anda.', type: 'danger' } }));
+    isCameraActive.value = false;
+  }
+};
+
+const stopCamera = () => {
+  if (stream.value) {
+    stream.value.getTracks().forEach(track => track.stop());
+    stream.value = null;
+  }
+  isCameraActive.value = false;
+};
+
+const getGeolocation = () => {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    isLocationFetching.value = true;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        coords.value.latitude = position.coords.latitude;
+        coords.value.longitude = position.coords.longitude;
+        isLocationFetching.value = false;
+        resolve(position.coords);
+      },
+      (error) => {
+        console.error("Gagal mendapatkan lokasi:", error);
+        isLocationFetching.value = false;
+        resolve(null);
+      },
+      { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+    );
   });
 };
 
-// ---- QR Countdown (900 detik = 15 menit) ----
-const countdownSecs = ref(900);
-let countdownTimer;
+const capturePhoto = async () => {
+  if (!videoRef.value) return;
 
-const countdownDisplay = computed(() => {
-  const m = Math.floor(countdownSecs.value / 60);
-  const s = countdownSecs.value % 60;
-  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-});
-const countdownPct = computed(() => (countdownSecs.value / 900) * 100);
+  const video = videoRef.value;
 
-const isBypassing = ref(false);
+  // Wajibkan landscape mode
+  if (video.videoWidth < video.videoHeight) {
+    window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Gagal jepret! Wajib memutar HP ke posisi horizontal (landscape) agar semua siswa masuk dalam foto.', type: 'danger' } }));
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+
+  const ctx = canvas.getContext('2d');
+  
+  // Efek cermin saat menggambar dari video selfie (facingMode user)
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+
+  // Jalankan fetch koordinat secara async paralel jika belum ada
+  if (!coords.value.latitude) {
+    await getGeolocation();
+  }
+
+  // Tambahkan Watermark yang lebih tebal dan jelas
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 13px sans-serif';
+
+  // Watermark Waktu
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + ' ' + now.toLocaleTimeString('id-ID');
+  ctx.fillText(`📅 WAKTU : ${dateStr}`, 15, canvas.height - 48);
+
+  // Watermark Lokasi GPS
+  const latVal = coords.value.latitude ? coords.value.latitude.toFixed(6) : 'Tidak Terdeteksi';
+  const lngVal = coords.value.longitude ? coords.value.longitude.toFixed(6) : 'Tidak Terdeteksi';
+  ctx.fillText(`📍 LOKASI: Lat: ${latVal}, Lng: ${lngVal}`, 15, canvas.height - 20);
+
+  // Kompresi kualitas JPEG 0.6 (60%)
+  capturedImage.value = canvas.toDataURL('image/jpeg', 0.6);
+  stopCamera();
+};
+
+const handleFileInput = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Cek koordinat GPS
+  if (!coords.value.latitude) {
+    await getGeolocation();
+  }
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      // Wajibkan landscape mode
+      if (img.width < img.height) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Foto ditolak! Wajib mengambil foto dalam posisi horizontal/landscape agar seluruh kelas terlihat.', type: 'danger' } }));
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      const maxW = 640;
+      const maxH = 480;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxW) {
+        h = Math.round((h * maxW) / w);
+        w = maxW;
+      }
+      if (h > maxH) {
+        w = Math.round((w * maxH) / h);
+        h = maxH;
+      }
+      canvas.width = w;
+      canvas.height = h;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // Tambahkan Watermark yang lebih tebal dan jelas
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 13px sans-serif';
+
+      // Watermark Waktu
+      const nowTime = new Date();
+      const dateStr = nowTime.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + ' ' + nowTime.toLocaleTimeString('id-ID');
+      ctx.fillText(`📅 WAKTU : ${dateStr}`, 15, canvas.height - 48);
+
+      // Watermark Lokasi GPS
+      const latVal = coords.value.latitude ? coords.value.latitude.toFixed(6) : 'Tidak Terdeteksi';
+      const lngVal = coords.value.longitude ? coords.value.longitude.toFixed(6) : 'Tidak Terdeteksi';
+      ctx.fillText(`📍 LOKASI: Lat: ${latVal}, Lng: ${lngVal}`, 15, canvas.height - 20);
+
+      // Kompresi kualitas JPEG 0.6 (60%)
+      capturedImage.value = canvas.toDataURL('image/jpeg', 0.6);
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const submitSelfie = () => {
+  if (!capturedImage.value) return;
+
+  isUploadingSelfie.value = true;
+  router.post(`/guru/sesi-kbm/${props.sessionId}/selfie`, {
+    foto: capturedImage.value,
+    latitude: coords.value.latitude ? String(coords.value.latitude) : null,
+    longitude: coords.value.longitude ? String(coords.value.longitude) : null
+  }, {
+    onSuccess: () => {
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Selfie berhasil diverifikasi & KBM aktif!', type: 'success' } }));
+    },
+    onError: (err) => {
+      console.error(err);
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Gagal mengunggah selfie check-in.', type: 'danger' } }));
+    },
+    onFinish: () => {
+      isUploadingSelfie.value = false;
+    }
+  });
+};
+
 const bypassScan = () => {
   isBypassing.value = true;
   router.post(`/dev/kbm-session/${props.sessionId}/bypass-scan`, {}, {
     onSuccess: () => {
-      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'KBM berhasil diaktifkan via simulasi scan!', type: 'success' } }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'KBM diaktifkan via bypass simulasi!', type: 'success' } }));
     },
     onFinish: () => {
       isBypassing.value = false;
@@ -516,43 +734,10 @@ const bypassScan = () => {
   });
 };
 
-let statusPollingInterval = null;
-
 onMounted(() => {
   if (sessionStatus.value === 'SCANNING') {
-    qrPayload.value = generateQrPayload();
-    countdownTimer = setInterval(() => {
-      if (countdownSecs.value > 0) {
-        countdownSecs.value--;
-      } else {
-        countdownSecs.value = 900;
-        qrPayload.value = generateQrPayload();
-      }
-    }, 1000);
-
-    // Polling untuk mendeteksi scan QR dari perwakilan kelas
-    statusPollingInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`/guru/kbm-status/${props.sessionId}`);
-        const data = await res.json();
-        if (data.status_sesi === 'AKTIF') {
-          clearInterval(statusPollingInterval);
-          router.reload({
-            onSuccess: () => {
-              sessionStatus.value = 'AKTIF';
-            }
-          });
-        }
-      } catch (e) {
-        console.error('Polling error:', e);
-      }
-    }, 3000);
+    getGeolocation();
   }
-});
-
-onUnmounted(() => {
-  if (countdownTimer) clearInterval(countdownTimer);
-  if (statusPollingInterval) clearInterval(statusPollingInterval);
 });
 
 // ---- Session info ----

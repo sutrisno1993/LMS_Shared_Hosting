@@ -48,6 +48,25 @@
           
         </div>
 
+        <!-- Fallback Bypass Button when camera has error / by default on local -->
+        <div v-if="activeSession" class="w-full mt-6 p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-center shadow-lg">
+          <p class="text-xs text-amber-300 font-semibold mb-3 flex items-center justify-center gap-1.5">
+            <span>⚠️</span> Kamera Bermasalah (Akses Non-HTTPS)
+          </p>
+          <p class="text-[11px] text-slate-400 mb-4">
+            Anda dapat melakukan presensi kehadiran secara mandiri tanpa memindai QR Code di bawah ini:
+          </p>
+          <button @click="bypassPresensi" :disabled="isProcessing"
+                  class="w-full py-3.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-500/25 active:scale-95 disabled:opacity-60">
+            🙋‍♂️ Presensi Hadir: {{ activeSession.mapel }}
+          </button>
+        </div>
+        <div v-else-if="errorMessage" class="w-full mt-6 p-4 rounded-2xl border border-slate-500/20 bg-slate-500/5 text-center">
+          <p class="text-xs text-slate-400 font-medium">
+            Tidak ada sesi KBM kelas Anda yang sedang menunggu presensi (status SCANNING).
+          </p>
+        </div>
+
         <button @click="resetScanner" class="mt-8 px-6 py-2.5 rounded-xl text-sm font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors w-full border border-indigo-500/20">
           Reset / Ulangi Scan
         </button>
@@ -63,6 +82,10 @@ import { ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { QrcodeStream } from 'vue-qrcode-reader';
 import axios from 'axios';
+
+const props = defineProps({
+  activeSession: Object,
+});
 
 const navigation = [
   {
@@ -92,6 +115,35 @@ const resetScanner = () => {
   errorMessage.value = '';
   successMessage.value = '';
   isProcessing.value = false;
+};
+
+const bypassPresensi = async () => {
+  if (!props.activeSession || isProcessing.value) return;
+  
+  isProcessing.value = true;
+  errorMessage.value = '';
+  
+  const payloadObj = {
+    id_kbm_session: props.activeSession.id_kbm_session,
+    timestamp: Date.now()
+  };
+  const payload = JSON.stringify(payloadObj);
+  
+  try {
+    const response = await axios.post('/siswa/scan-qr', { payload });
+    successMessage.value = response.data.message;
+    
+    // Redirect ke dashboard setelah sukses 3 detik
+    setTimeout(() => {
+      router.visit('/siswa/dashboard');
+    }, 3000);
+    
+  } catch (err) {
+    errorMessage.value = err.response?.data?.message || 'Gagal melakukan presensi.';
+    setTimeout(() => {
+      isProcessing.value = false;
+    }, 2000);
+  }
 };
 
 const onCameraOn = () => {

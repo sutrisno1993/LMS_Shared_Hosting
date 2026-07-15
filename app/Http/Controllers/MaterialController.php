@@ -99,19 +99,36 @@ class MaterialController extends Controller
     // SISWA METHODS
     // ==========================================
 
-    public function siswaIndex()
+    public function siswaIndex(Request $request)
     {
         $user = Auth::user();
         $siswa = Student::with('clas')->findOrFail($user->id_siswa);
 
-        // Ambil materi yang ditujukan untuk kelas siswa ini
-        $materials = Material::with(['teacher', 'subject'])
+        // Ambil daftar mata pelajaran untuk kelas siswa ini
+        $classSubjects = ClassSubject::with(['subject'])
             ->where('id_kelas', $siswa->id_kelas)
-            ->orderBy('created_at', 'desc')
             ->get();
 
+        $selectedMapel = $request->input('id_mapel', $classSubjects->first()->id_mapel ?? null);
+
+        $babs = [];
+        $tpProgress = [];
+
+        if ($selectedMapel) {
+            $babs = \App\Models\Bab::with(['sub_materis.aktivitas_pembelajarans', 'learning_objectives'])
+                ->where('id_mapel', $selectedMapel)
+                ->orderBy('urutan')
+                ->get();
+
+            $gradingService = new \App\Services\GradingService();
+            $tpProgress = $gradingService->calculateStudentTpProgress($siswa->id_siswa, $selectedMapel);
+        }
+
         return Inertia::render('Siswa/Materi', [
-            'materials' => $materials,
+            'classSubjects' => $classSubjects,
+            'selectedMapel' => $selectedMapel,
+            'babs' => $babs,
+            'tpProgress' => $tpProgress,
         ]);
     }
 

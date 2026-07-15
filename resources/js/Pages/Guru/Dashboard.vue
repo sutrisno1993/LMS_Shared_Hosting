@@ -33,25 +33,24 @@
           </div>
         </div>
 
-        <!-- LAYAR QR CODE (Tampil jika ada sesi PENDING yang aktif) -->
+        <!-- LAYAR SELFIE CHECK-IN (Tampil jika ada sesi SCANNING yang aktif) -->
         <div v-if="activePendingSession" class="rounded-2xl border-2 border-indigo-500 bg-indigo-900/20 p-8 flex flex-col items-center justify-center text-center space-y-4 shadow-[0_0_40px_rgba(79,70,229,0.2)]">
-          <h3 class="text-xl font-bold text-white">KELAS SEGERA DIMULAI</h3>
-          <p class="text-sm text-indigo-200 max-w-md">Silakan tampilkan QR Code ini ke layar proyektor atau hadapkan ke perwakilan kelas untuk di-scan menggunakan HP mereka.</p>
+          <div class="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center text-3xl mb-2 animate-bounce">
+            📸
+          </div>
+          <h3 class="text-xl font-black text-white uppercase tracking-wider">SELFIE CHECK-IN DIPERLUKAN</h3>
+          <p class="text-xs text-indigo-200 max-w-md">Silakan ambil foto selfie bersama siswa di dalam kelas untuk memulai dan mengaktifkan sesi KBM ini.</p>
           
-          <div class="p-4 bg-white rounded-xl shadow-xl inline-block mt-4">
-            <QrcodeVue :value="qrPayload" :size="250" level="H" render-as="svg" />
-          </div>
-
-          <div class="mt-4 flex items-center justify-center gap-2 text-xs font-mono text-indigo-300">
-            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-            Menunggu scan siswa... (Auto-refresh 10s)
-          </div>
+          <a :href="`/guru/sesi-kbm/${activePendingSession.id}`"
+             class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all hover:scale-105 shadow-lg shadow-indigo-500/30 mt-4">
+            📸 Ambil Foto Selfie Sekarang
+          </a>
         </div>
 
         <!-- Session Cards -->
         <div v-for="sesi in jadwalList" :key="sesi.id"
              :class="[
-               'relative rounded-2xl border p-5 transition-all duration-200',
+               'relative rounded-2xl border p-4 sm:p-5 transition-all duration-200',
                sesi.isTerlewat
                  ? 'border-red-500/60 bg-red-500/5 shadow-lg shadow-red-500/10'
                  : sesi.isActive
@@ -64,63 +63,86 @@
              ]"
              style="background: var(--card)">
 
-          <!-- Terlewat warning badge -->
+          <!-- Top Status Bar (Only on Mobile, Hidden on Desktop) -->
+          <div class="flex sm:hidden items-center justify-between mb-3 pb-2 border-b border-white/5">
+            <span :class="statusBadge(sesi.statusGuru)">{{ sesi.statusGuru }}</span>
+            <div v-if="sesi.isTerlewat" class="flex items-center gap-1 text-[10px] font-bold text-red-400 animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+              TERLEWAT
+            </div>
+            <div v-else-if="sesi.isActive" class="flex items-center gap-1 text-[10px] font-semibold text-indigo-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+              SLOT AKTIF
+            </div>
+            <div v-else-if="sesi.id === closestUpcomingSessionId" class="flex items-center gap-1 text-[10px] font-semibold text-amber-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+              SESI BERIKUTNYA
+            </div>
+          </div>
+
+          <!-- Desktop Badges (Hidden on Mobile) -->
           <div v-if="sesi.isTerlewat"
-               class="absolute top-4 right-4 flex items-center gap-2 text-xs font-bold text-red-400 animate-pulse">
+               class="hidden sm:flex absolute top-4 right-4 items-center gap-2 text-xs font-bold text-red-400 animate-pulse">
             <span class="w-2 h-2 rounded-full bg-red-400"></span>
             SESI TERLEWAT
           </div>
-
-          <!-- Active glow indicator -->
           <div v-else-if="sesi.isActive"
-               class="absolute top-4 right-4 flex items-center gap-2 text-xs font-semibold text-indigo-400">
+               class="hidden sm:flex absolute top-4 right-4 items-center gap-2 text-xs font-semibold text-indigo-400">
             <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
             SLOT AKTIF SEKARANG
           </div>
           <div v-else-if="sesi.id === closestUpcomingSessionId"
-               class="absolute top-4 right-4 flex items-center gap-2 text-xs font-semibold text-amber-400">
+               class="hidden sm:flex absolute top-4 right-4 items-center gap-2 text-xs font-semibold text-amber-400">
             <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
             SESI BERIKUTNYA
           </div>
 
-          <div class="flex items-start gap-4">
+          <!-- Layout: Flex Row on Desktop, Stack/Column on Mobile -->
+          <div class="flex flex-col sm:flex-row sm:items-start gap-4">
+            
             <!-- Time block -->
-            <div class="flex-shrink-0 text-center w-16">
-              <div class="text-lg font-black text-white font-mono">{{ sesi.jamMulai }}</div>
-              <div class="text-[10px] text-slate-600 mt-0.5">JP {{ sesi.jamKe }}</div>
-              <div class="text-xs text-slate-600 font-mono">{{ sesi.jamSelesai }}</div>
+            <div class="flex items-center sm:items-start sm:flex-col gap-3 sm:gap-1 sm:w-16 flex-shrink-0">
+              <div class="text-center w-16 sm:w-auto bg-white/5 sm:bg-transparent p-2 sm:p-0 rounded-lg">
+                <div class="text-base sm:text-lg font-black text-white font-mono">{{ sesi.jamMulai }}</div>
+                <div class="text-[9px] sm:text-[10px] text-slate-500 sm:text-slate-600 mt-0.5">JP {{ sesi.jamKe }}</div>
+                <div class="text-xs text-slate-500 sm:text-slate-600 font-mono">{{ sesi.jamSelesai }}</div>
+              </div>
             </div>
 
-            <!-- Divider -->
-            <div class="w-px self-stretch bg-white/8"></div>
+            <!-- Vertical Divider (Hidden on Mobile) -->
+            <div class="hidden sm:block w-px self-stretch bg-white/8"></div>
 
             <!-- Session info -->
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <h3 class="font-bold text-sm">{{ sesi.mapel }}</h3>
-                <span :class="statusBadge(sesi.statusGuru)">{{ sesi.statusGuru }}</span>
+              <div class="flex items-center gap-2 mb-1.5">
+                <h3 class="font-black text-base sm:text-sm text-white tracking-tight">{{ sesi.mapel }}</h3>
+                <span :class="statusBadge(sesi.statusGuru)" class="hidden sm:inline-block">{{ sesi.statusGuru }}</span>
               </div>
-              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold"
-                      :class="(sesi.shift || 'PAGI').toUpperCase() === 'PAGI' 
-                        ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' 
-                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'">
-                  Shift {{ (sesi.shift || 'PAGI').toUpperCase() }}
+              
+              <!-- Session meta grid: 2 cols on mobile, flex row on desktop -->
+              <div class="grid grid-cols-2 gap-y-2 gap-x-4 sm:flex sm:items-center sm:gap-3 text-xs text-slate-400 sm:text-slate-500">
+                <span class="col-span-2 sm:col-span-1 self-start">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold animate-pulse"
+                        :class="(sesi.shift || 'PAGI').toUpperCase() === 'PAGI' 
+                          ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' 
+                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'">
+                    Shift {{ (sesi.shift || 'PAGI').toUpperCase() }}
+                  </span>
                 </span>
-                <span>🏫 {{ sesi.kelas }}</span>
-                <span>📍 Ruang {{ sesi.ruang }}</span>
-                <span>⏱ {{ sesi.durasiJP }} JP ({{ sesi.durasiMenit }} menit)</span>
+                <span class="flex items-center gap-1 font-semibold text-slate-300 sm:text-slate-500">🏫 {{ sesi.kelas }}</span>
+                <span class="flex items-center gap-1">📍 Ruang {{ sesi.ruang }}</span>
+                <span class="flex items-center gap-1 col-span-2 sm:col-span-1">⏱ {{ sesi.durasiJP }} JP ({{ sesi.durasiMenit }} menit)</span>
               </div>
 
               <!-- Terlewat warning bar -->
-              <div v-if="sesi.isTerlewat" class="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
-                <span class="text-red-400 text-base">⚠️</span>
-                <span class="text-xs font-bold text-red-400">Anda melewatkan sesi ini!! Check-in harus dilakukan maksimal 20 menit setelah bel.</span>
+              <div v-if="sesi.isTerlewat" class="mt-3 flex items-start gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
+                <span class="text-red-400 text-sm mt-0.5">⚠️</span>
+                <span class="text-[11px] font-bold text-red-400 leading-snug">Check-in terlewat! Batas maksimal check-in adalah 20 menit setelah sesi dimulai.</span>
               </div>
 
               <!-- Student counter (if active) -->
               <div v-else-if="sesi.status === 'AKTIF' || sesi.status === 'PENDING_AKTIF'"
-                   class="mt-3 flex items-center gap-3">
+                   class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-black/10 p-2.5 sm:p-0 rounded-xl sm:bg-transparent">
                 <div class="text-xs text-slate-400">
                   Siswa hadir: <span class="font-bold text-white">{{ sesi.siswaHadir }}/{{ sesi.siswaTotal }}</span>
                 </div>
@@ -131,43 +153,51 @@
               </div>
             </div>
 
-            <!-- Action button -->
-            <div class="flex-shrink-0">
+            <!-- Action button block: Full width on Mobile, Auto on Desktop -->
+            <div class="w-full sm:w-auto flex-shrink-0 mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-white/5 sm:border-0">
 
-              <!-- TERLEWAT — sesi tidak dimulai dalam 20 menit -->
+              <!-- TERLEWAT -->
               <div v-if="sesi.isTerlewat"
-                   class="px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20">
+                   class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20">
                 ⚠️ Terlewat
               </div>
 
-              <!-- MULAI SESI — hanya jika slot aktif dan belum dimulai -->
+              <!-- MULAI SESI -->
               <button
                 v-else-if="sesi.isActive && sesi.status === 'PENDING'"
                 @click="mulaiSesi(sesi)"
-                class="relative overflow-hidden flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
-                style="background: linear-gradient(135deg, #4F46E5, #7C3AED); box-shadow: 0 0 20px rgba(79,70,229,0.5), 0 0 40px rgba(79,70,229,0.2);">
+                class="relative overflow-hidden w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 sm:py-3 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
+                style="background: linear-gradient(135deg, #4F46E5, #7C3AED); box-shadow: 0 0 15px rgba(79,70,229,0.4);">
                 <span class="relative z-10">▶ Mulai Sesi KBM</span>
                 <!-- Shimmer -->
                 <div class="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-full animate-[shimmer_2s_infinite]"></div>
               </button>
 
-              <!-- LIHAT ABSENSI — jika sudah aktif -->
+              <!-- AMBIL SELFIE CHECK-IN (SCANNING) -->
+              <a
+                v-else-if="sesi.status === 'SCANNING'"
+                :href="`/guru/sesi-kbm/${sesi.id}`"
+                class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors">
+                📸 Selfie Check-in
+              </a>
+
+              <!-- LIHAT ABSENSI -->
               <a
                 v-else-if="sesi.status === 'AKTIF' || sesi.status === 'PENDING_AKTIF'"
                 :href="`/guru/sesi-kbm/${sesi.id}`"
-                class="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-500 transition-colors">
+                class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-500 transition-colors">
                 📋 Lihat Absensi
               </a>
 
               <!-- SELESAI -->
               <div v-else-if="sesi.statusSesi === 'SELESAI'"
-                   class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 bg-white/4 border border-white/8">
+                   class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 bg-white/4 border border-white/8">
                 ✓ Selesai
               </div>
 
               <!-- PENDING / BELUM AKTIF -->
               <div v-else
-                   class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 bg-white/4 border border-white/8">
+                   class="w-full sm:w-auto text-center px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 bg-white/4 border border-white/8">
                 <span v-if="sesi.id === closestUpcomingSessionId" class="text-amber-400 font-bold">
                   ⏳ {{ getCountdownText(sesi) }}
                 </span>
@@ -255,10 +285,9 @@
 </template>
 
 <script setup>
-import { Head, router } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import QrcodeVue from 'qrcode.vue';
 
 const props = defineProps({ 
   sessions: Array,
@@ -267,6 +296,8 @@ const props = defineProps({
   mapelDiampu: Array,
   isPiketToday: Boolean,
 });
+
+const page = usePage();
 
 // Live clock aligned with simulated server time
 const now = ref(new Date());
@@ -414,55 +445,9 @@ const jadwalList = computed(() => {
   });
 });
 
-// Logika QR Code Generator & Polling
+// Sesi aktif yang memerlukan selfie check-in
 const activePendingSession = computed(() => {
   return props.jadwal?.find(j => j.status_sesi === 'SCANNING' && j.is_active);
-});
-
-const qrPayload = ref('');
-
-let qrRefreshInterval = null;
-let statusPollingInterval = null;
-
-const generateQrPayload = (session) => {
-  if (!session || !session.payload) return '';
-  const data = JSON.parse(session.payload);
-  data.timestamp = Date.now();
-  return JSON.stringify(data);
-};
-
-watch(activePendingSession, (newSession) => {
-  if (newSession) {
-    qrPayload.value = generateQrPayload(newSession);
-    
-    if (!qrRefreshInterval) {
-      qrRefreshInterval = setInterval(() => {
-        qrPayload.value = generateQrPayload(newSession);
-      }, 10000);
-    }
-    
-    if (!statusPollingInterval) {
-      statusPollingInterval = setInterval(async () => {
-        try {
-          const res = await fetch(`/guru/kbm-status/${newSession.id}`);
-          const data = await res.json();
-          if (data.status_sesi === 'AKTIF') {
-            router.reload({ only: ['jadwal'] });
-          }
-        } catch (e) {
-          console.error('Polling error', e);
-        }
-      }, 3000);
-    }
-  } else {
-    if (qrRefreshInterval) { clearInterval(qrRefreshInterval); qrRefreshInterval = null; }
-    if (statusPollingInterval) { clearInterval(statusPollingInterval); statusPollingInterval = null; }
-  }
-}, { immediate: true });
-
-onUnmounted(() => {
-  if (qrRefreshInterval) clearInterval(qrRefreshInterval);
-  if (statusPollingInterval) clearInterval(statusPollingInterval);
 });
 
 const myStats = ref({ hadir: 24, terlambat: 3, alpa: 1, pctHadir: 86, pctTerlambat: 11, pctAlpa: 3 });

@@ -415,6 +415,7 @@ const resolvedNavigation = computed(() => {
       {
         label: 'Laporan',
         items: [
+          { href: '/admin/laporan-kehadiran', icon: '🚨', label: 'Laporan Kehadiran Siswa' },
           { href: '/admin/kepatuhan-guru', icon: '📋', label: 'Kepatuhan KBM' },
           { href: '/admin/monitoring-nilai', icon: '📈', label: 'Monitoring Nilai' },
           { href: '/admin/rapor', icon: '📋', label: 'Ekspor Rapor' },
@@ -447,8 +448,7 @@ const resolvedNavigation = computed(() => {
         items: [
           { href: '/guru/pemetaan-materi', icon: '🗺️', label: 'Pemetaan Materi' },
           { href: '/guru/bank-soal', icon: '📝', label: 'Bank Soal & Ujian Live' },
-          { href: '/guru/nilai-sumatif', icon: '📊', label: 'Nilai Sumatif' },
-          { href: '/guru/nilai-akhir', icon: '📋', label: 'Nilai Akhir' },
+          { href: '/guru/nilai-akhir', icon: '📋', label: 'Kelola Nilai' },
           { href: '/guru/rapor-preview', icon: '📑', label: 'Rapor Preview' },
         ],
       },

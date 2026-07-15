@@ -136,7 +136,23 @@ class SiswaController extends Controller
 
     public function scanQr()
     {
-        return Inertia::render('Siswa/ScanQR');
+        $user = Auth::user();
+        $siswa = Student::find($user->id_siswa);
+        
+        $activeSession = null;
+        if ($siswa && $siswa->id_kelas) {
+            $activeSession = \App\Models\KbmSession::with('subject')
+                ->where('id_kelas', $siswa->id_kelas)
+                ->where('status_sesi', 'SCANNING')
+                ->first();
+        }
+
+        return Inertia::render('Siswa/ScanQR', [
+            'activeSession' => $activeSession ? [
+                'id_kbm_session' => $activeSession->id,
+                'mapel' => $activeSession->subject->nama_mapel ?? 'Mata Pelajaran',
+            ] : null,
+        ]);
     }
 
     public function processScan(Request $request)
@@ -337,23 +353,13 @@ class SiswaController extends Controller
         $siswa = Student::with('clas')->find($user->id_siswa);
 
         $nilaiList = [];
-        $bobotFormatif = 40;
-        $bobotSumatif = 40;
-        $bobotAbsensi = 20;
 
         if ($siswa && $siswa->id_kelas) {
-            // Ambil semua ClassSubject untuk kelas siswa
             $classSubjects = \App\Models\ClassSubject::with(['subject', 'guruMutlak'])
                 ->where('id_kelas', $siswa->id_kelas)
                 ->get();
 
-            // Ambil konfigurasi bobot nilai
-            $config = \App\Models\GradeConfig::find(1);
-            if ($config) {
-                $bobotFormatif = $config->bobot_formatif;
-                $bobotSumatif = $config->bobot_sumatif;
-                $bobotAbsensi = $config->bobot_absensi;
-            }
+            $gradingService = new \App\Services\GradingService();
 
             foreach ($classSubjects as $cs) {
                 // Tentukan guru untuk mapel ini
@@ -361,7 +367,6 @@ class SiswaController extends Controller
                 $guru = $cs->guruMutlak;
 
                 if (!$idGuru) {
-                    // Cari dari timetable
                     $timetableEntry = \App\Models\Timetable::with('teacher')
                         ->where('id_class_subject', $cs->id_class_subject)
                         ->whereNotNull('id_guru')
@@ -372,85 +377,25 @@ class SiswaController extends Controller
                     }
                 }
 
-                // 1. Ambil Tujuan Pembelajaran (TP) untuk mapel dan guru ini
-                $tpList = \App\Models\LearningObjective::where('id_mapel', $cs->id_mapel)
-                    ->where('id_guru', $idGuru)
-                    ->orderBy('kode_tp')
-                    ->get();
+                // Hitung nilai akhir semester via GradingService
+                $endGrades = $gradingService->calculateEndSemesterGrades($siswa->id_kelas, $cs->id_mapel);
+                $studentEndGrade = collect($endGrades['students'])->firstWhere('id_siswa', $siswa->id_siswa);
 
-                // 2. Ambil nilai siswa untuk masing-masing TP
-                $tpGrades = \App\Models\StudentGrade::where('id_siswa', $siswa->id_siswa)
-                    ->whereIn('id_tp', $tpList->pluck('id_tp'))
-                    ->get();
+                // Hitung nilai tengah semester via GradingService
+                $midGrades = $gradingService->calculateMidSemesterGrades($siswa->id_kelas, $cs->id_mapel);
+                $studentMidGrade = collect($midGrades['students'])->firstWhere('id_siswa', $siswa->id_siswa);
 
-                // Hitung rata-rata Formatif (TP)
-                $details = [];
-                $tpTotalScore = 0;
-                $tpGradedCount = 0;
+                // TP progress breakdown
+                $tpProgressList = $gradingService->calculateStudentTpProgress($siswa->id_siswa, $cs->id_mapel);
 
-                foreach ($tpList as $tp) {
-                    $gradeObj = $tpGrades->firstWhere('id_tp', $tp->id_tp);
-                    $nilaiTp = $gradeObj ? $gradeObj->nilai : null;
-
-                    if ($nilaiTp !== null) {
-                        $tpTotalScore += $nilaiTp;
-                        $tpGradedCount++;
-                    }
-
-                    $details[] = [
-                        'id_tp' => $tp->id_tp,
-                        'kode' => $tp->kode_tp,
-                        'deskripsi' => $tp->deskripsi_tp,
-                        'nilai' => $nilaiTp,
-                        'is_remedial' => ($nilaiTp !== null && $nilaiTp < 75), // KKM 75
-                        'is_empty' => ($nilaiTp === null),
-                    ];
-                }
-
-                $rataTP = $tpGradedCount > 0 ? round($tpTotalScore / $tpGradedCount, 1) : 0;
-
-                // 3. Hitung persentase kehadiran (Absensi)
-                // Cari total sesi KBM SELESAI untuk kelas ini dan mapel ini
-                $totalSessions = \App\Models\KbmSession::where('id_kelas', $siswa->id_kelas)
-                    ->where('id_mapel', $cs->id_mapel)
-                    ->where('status_sesi', 'SELESAI')
-                    ->count();
-
-                // Cari total kehadiran HADIR untuk siswa ini
-                $presentSessions = \App\Models\StudentAttendance::where('id_siswa', $siswa->id_siswa)
-                    ->where('status', 'HADIR')
-                    ->whereHas('kbmSession', function ($q) use ($cs) {
-                        $q->where('id_kelas', $cs->id_kelas)
-                          ->where('id_mapel', $cs->id_mapel)
-                          ->where('status_sesi', 'SELESAI');
-                    })
-                    ->count();
-
-                $nilaiAbsensi = $totalSessions > 0 ? round(($presentSessions / $totalSessions) * 100, 1) : 100.0;
-
-                // 4. Ambil Nilai SAS & Rapor Resmi dari ReportCard
-                $raporObj = \App\Models\ReportCard::where('id_siswa', $siswa->id_siswa)
-                    ->where('id_class_subject', $cs->id_class_subject)
-                    ->first();
-                $nilaiSAS = $raporObj ? $raporObj->nilai_sas : 0;
-
-                // 5. Kalkulasi Estimasi Nilai Akhir (Preview)
-                $nilaiAkhir = ($rataTP * $bobotFormatif + $nilaiSAS * $bobotSumatif + $nilaiAbsensi * $bobotAbsensi) / 100;
-                $nilaiAkhir = round($nilaiAkhir);
-                
-                // Jika Guru sudah pernah mensubmit nilai akhir secara resmi, GUNAKAN NILAI GURU (Read-only)
-                if ($raporObj && $raporObj->nilai_akhir !== null) {
-                    $nilaiAkhir = $raporObj->nilai_akhir;
-                }
-
-                // Generate deskripsi capaian dinamis HANYA UNTUK DITAMPILKAN (Bukan disimpan ke database)
-                $desc = $raporObj->deskripsi_capaian ?? '';
-                if (empty($desc)) {
-                    $sortedDetails = collect($details)->whereNotNull('nilai')->sortByDesc('nilai');
-                    if ($sortedDetails->count() > 0) {
-                        $highest = $sortedDetails->first();
-                        $lowest = $sortedDetails->last();
-                        $desc = "Menunjukkan penguasaan yang sangat baik dalam " . $highest['deskripsi'] . ". Namun, perlu pendampingan lebih lanjut pada " . $lowest['deskripsi'] . ".";
+                // Generate deskripsi capaian dinamis (fallback)
+                $desc = '';
+                $sortedTps = collect($tpProgressList)->sortByDesc('nilai');
+                if ($sortedTps->count() > 0) {
+                    $highest = $sortedTps->first();
+                    $lowest = $sortedTps->last();
+                    if ($highest['nilai'] !== null && $lowest['nilai'] !== null) {
+                        $desc = "Menunjukkan penguasaan yang sangat baik dalam " . $highest['deskripsi_tp'] . ". Namun, perlu pendampingan lebih lanjut pada " . $lowest['deskripsi_tp'] . ".";
                     }
                 }
 
@@ -458,12 +403,21 @@ class SiswaController extends Controller
                     'id' => $cs->id_class_subject,
                     'nama' => $cs->subject->nama_mapel ?? 'Unknown',
                     'guru' => $guru->nama_guru ?? 'Unknown',
-                    'nilai' => $nilaiAkhir,
-                    'rataTP' => $rataTP,
-                    'sas' => $nilaiSAS,
-                    'absensi' => $nilaiAbsensi,
+                    'kkm' => $cs->subject->kkm ?? 75,
+                    'mid' => [
+                        'absensi' => $studentMidGrade ? $studentMidGrade['absensi'] : 100,
+                        'formatif' => $studentMidGrade ? $studentMidGrade['formatif'] : null,
+                        'sts' => $studentMidGrade ? $studentMidGrade['sts'] : null,
+                        'nilai_rapor' => $studentMidGrade ? $studentMidGrade['nilai_rapor'] : null,
+                    ],
+                    'end' => [
+                        'formatif' => $studentEndGrade ? $studentEndGrade['formatif'] : null,
+                        'sts' => $studentEndGrade ? $studentEndGrade['sts'] : null,
+                        'sas' => $studentEndGrade ? $studentEndGrade['sas'] : null,
+                        'nilai_rapor' => $studentEndGrade ? $studentEndGrade['nilai_rapor'] : null,
+                    ],
                     'deskripsi' => $desc ?: 'Belum ada deskripsi capaian.',
-                    'details' => $details,
+                    'details' => $tpProgressList,
                     'expanded' => false
                 ];
             }
@@ -471,11 +425,6 @@ class SiswaController extends Controller
 
         return Inertia::render('Siswa/Nilai', [
             'nilaiList' => $nilaiList,
-            'bobotConfig' => [
-                'formatif' => $bobotFormatif,
-                'sumatif' => $bobotSumatif,
-                'absensi' => $bobotAbsensi
-            ]
         ]);
     }
 

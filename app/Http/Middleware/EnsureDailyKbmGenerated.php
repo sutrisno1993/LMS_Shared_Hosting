@@ -61,14 +61,14 @@ class EnsureDailyKbmGenerated
                 'status_guru' => 'ALPA'
             ]);
 
-        // 2. Sesi KBM hari ini yang sudah lewat jam selesainya tapi masih PENDING otomatis ALPA
+        // 2. Sesi KBM hari ini yang sudah lewat jam selesainya tapi masih belum selesai
         if ($hariEnum !== 'MINGGU') {
-            $pendingToday = \App\Models\KbmSession::with(['clas'])
+            $sessionsToday = \App\Models\KbmSession::with(['clas'])
                 ->where('tanggal', $today)
-                ->where('status_sesi', 'PENDING')
+                ->whereIn('status_sesi', ['PENDING', 'SCANNING', 'AKTIF'])
                 ->get();
 
-            foreach ($pendingToday as $session) {
+            foreach ($sessionsToday as $session) {
                 if ($session->clas) {
                     $shift = $session->clas->shift_operasional;
                     $jp = \App\Models\JpSchedule::where('hari', $hariEnum)
@@ -78,8 +78,13 @@ class EnsureDailyKbmGenerated
 
                     if ($jp && $jp->waktu_selesai) {
                         if ($nowTime > $jp->waktu_selesai) {
-                            $session->status_sesi = 'KOSONG';
-                            $session->status_guru = 'ALPA';
+                            if ($session->status_sesi === 'PENDING') {
+                                $session->status_sesi = 'KOSONG';
+                                $session->status_guru = 'ALPA';
+                            } else {
+                                // Jika sudah SCANNING/AKTIF tapi lupa ditutup sampai lewat jam sesi
+                                $session->status_sesi = 'SELESAI';
+                            }
                             $session->save();
                         }
                     }
