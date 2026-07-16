@@ -35,11 +35,22 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $subdomain = strtolower(explode('.', $request->getHost())[0] ?? '');
+        
+        if (app()->environment(['local', 'development'])) {
+            // Di lingkungan lokal/development, default ke Bekasi
+            // kecuali jika subdomain secara eksplisit diakses sebagai 'jakarta' atau 'jkt'
+            $isBekasi = !($subdomain === 'jakarta' || $subdomain === 'jkt');
+        } else {
+            // Di lingkungan production, baca subdomain secara ketat
+            $isBekasi = ($subdomain === 'bekasi' || $subdomain === 'bks');
+        }
+
         try {
             $setting = \Illuminate\Support\Facades\DB::table('app_settings')->first();
-            $branchName = $setting ? $setting->branch_name : ((strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'LMS 11 Maret Bekasi' : 'LMS 11 Maret Jakarta');
+            $branchName = $setting ? $setting->branch_name : ($isBekasi ? 'LMS 11 Maret Bekasi' : 'LMS 11 Maret Jakarta');
         } catch (\Exception $e) {
-            $branchName = (strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'LMS 11 Maret Bekasi' : 'LMS 11 Maret Jakarta';
+            $branchName = $isBekasi ? 'LMS 11 Maret Bekasi' : 'LMS 11 Maret Jakarta';
         }
 
         return [
@@ -62,7 +73,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'app' => [
                 'branch' => [
-                    'code' => (strtolower(explode('.', $request->getHost())[0] ?? 'jakarta') === 'bekasi') ? 'BKS' : 'JKT',
+                    'code' => $isBekasi ? 'BKS' : 'JKT',
                     'name' => $branchName,
                 ],
                 'is_local_env' => app()->environment(['local', 'development']),
