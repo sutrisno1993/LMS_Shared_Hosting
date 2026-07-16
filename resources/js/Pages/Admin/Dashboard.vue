@@ -632,7 +632,7 @@ const currentClassesStatus = computed(() => {
     }
 
     // Ada KBM, cari sesinya
-    const session = props.live_kbm.find(s => s.id_kelas === cls.id_kelas && s.jam_ke === activeSchedule.jam_ke);
+    const session = props.live_kbm.find(s => Number(s.id_kelas) === Number(cls.id_kelas) && Number(s.jam_ke) === Number(activeSchedule.jam_ke));
 
     if (!session) {
       return {
