@@ -24,18 +24,13 @@ class TenantDatabaseMiddleware
             // Di lingkungan lokal/development, default ke database Bekasi (lms_bekasi)
             // kecuali jika subdomain secara eksplisit diakses sebagai 'jakarta' atau 'jkt'
             if ($subdomain === 'jakarta' || $subdomain === 'jkt') {
-                $dbName = env('DB_DATABASE', 'lms_db');
+                $dbName = config('database.connections.mysql.database');
             } else {
                 $dbName = 'lms_bekasi';
             }
         } else {
-            // Di lingkungan production, baca subdomain secara ketat
-            if ($subdomain === 'bekasi' || $subdomain === 'bks') {
-                $dbName = 'lms_bekasi';
-            } else {
-                // Default menggunakan database utama yang terdefinisi di .env (lms_db)
-                $dbName = env('DB_DATABASE', 'lms_db');
-            }
+            // Di lingkungan production, gunakan database default dari konfigurasi masing-masing subdomain
+            $dbName = config('database.connections.mysql.database');
         }
 
         // Set konfigurasi database MySQL secara runtime

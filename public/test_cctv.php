@@ -13,12 +13,25 @@ use App\Models\KbmSession;
 use App\Models\JpSchedule;
 use App\Models\Clas;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 try {
     echo "<pre>";
     echo "=========================================================\n";
     echo "           DIAGNOSIS REAL-TIME DATA CCTV & KBM           \n";
     echo "=========================================================\n\n";
+
+    // Cek Nama Database Aktif
+    echo "Database Default (.env): " . DB::connection()->getDatabaseName() . "\n";
+
+    // Simulasikan Middleware untuk bks.smk11maret.id
+    $reqSim = Illuminate\Http\Request::create('https://bks.smk11maret.id/admin/dashboard');
+    $middleware = new App\Http\Middleware\TenantDatabaseMiddleware();
+    $middleware->handle($reqSim, function($req) {
+        echo "Database Setelah Middleware: " . DB::connection()->getDatabaseName() . "\n";
+        return response('ok');
+    });
+    echo "\n";
 
     $today = Carbon::today()->toDateString();
     echo "Tanggal Hari Ini (Server): " . $today . "\n";
